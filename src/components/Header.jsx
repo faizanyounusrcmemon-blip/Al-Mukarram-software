@@ -81,7 +81,7 @@ export default function Header({ title }) {
                 marginLeft: 8,
               }}
             >
-              PVT LTD
+              TRAVEL & TOURS
             </span>
           </div>
 
