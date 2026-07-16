@@ -533,7 +533,7 @@ const exportPDF = async () => {
 
     pdf.setTextColor(255,255,255);
     pdf.setFontSize(16);
-    pdf.text("AL MUKARRAM PVT LTD", pageWidth/2,10,{align:"center"});
+    pdf.text("AL MUKARRAM TRAVEL & TOURS", pageWidth/2,10,{align:"center"});
 
     pdf.setFontSize(10);
     pdf.text("Supplier Ledger Statement", pageWidth/2,16,{align:"center"});
