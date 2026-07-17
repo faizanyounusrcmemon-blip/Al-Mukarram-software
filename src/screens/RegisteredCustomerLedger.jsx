@@ -527,7 +527,7 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
       try {
         // Prepare Metadata / Title Rows
         const headerInfo = [
-          ["MAKKI MADNI TRAVEL & TOURS"],
+          ["AL MUKARRAM TRAVEL & TOURS"],
           ["REGISTERED CUSTOMER FINANCIAL LEDGER"],
           [""],
           ["Customer Name:", customerName.toUpperCase(), "", "Printed Date:", getRowDate({ date: today })],
