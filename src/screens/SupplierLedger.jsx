@@ -447,7 +447,7 @@ export default function SupplierLedger({ onNavigate }) {
 
         // Header Rows Info
         const headerInfo = [
-          ["MAKKI MADNI TRAVEL"],
+          ["AL MUKARRAM TRAVEL & TOURS"],
           ["SUPPLIER LEDGER STATEMENT"],
           [""],
           ["Supplier Name:", supplierName.toUpperCase(), "", "Printed Date:", formatDate(today)],
