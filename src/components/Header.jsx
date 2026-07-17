@@ -25,33 +25,31 @@ export default function Header({ title }) {
         }}
       >
         {/* Logo */}
-
-<div
-  style={{
-    width: 85,
-    height: 85,
-    borderRadius: "50%",
-    border: "2px solid #d4af37",
-    overflow: "hidden",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "#fff",
-    flexShrink: 0,
-  }}
->
-  <img
-    src="/logo.png"
-    alt="Al Mukarram PVT Ltd"
-    style={{
-      width: "130%",
-      height: "130%",
-      objectFit: "contain",
-      transform: "scale(1.4)",
-      display: "block",
-    }}
-  />
-</div>
+        <div
+          style={{
+            width: 85,
+            height: 85,
+            borderRadius: "50%",
+            border: "2px solid #d4af37",
+            overflow: "hidden",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "#fff", 
+            flexShrink: 0,
+          }}
+        >
+          <img
+            src="/logo.png" // Agar aapka logo public folder me 'logo.png' ke naam se save hai
+            alt="Al Mukarram Travel & Tours"
+            style={{
+              width: "110%", // PNG ko proper size dene ke liye thoda badhaya hai
+              height: "110%",
+              objectFit: "contain",
+              display: "block",
+            }}
+          />
+        </div>
 
         {/* Company Info */}
         <div
