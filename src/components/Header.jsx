@@ -5,141 +5,121 @@ export default function Header({ title }) {
     <div
       className="pdf-header"
       style={{
-        background: "#ffffff",
-        borderRadius: 12,
-        padding: 10,
-        marginBottom: 10,
+        background: "#fff",
         border: "2px solid #d4af37",
-        boxShadow: "0 4px 10px rgba(0,0,0,.08)",
+        borderRadius: "10px",
+        padding: "12px",
+        marginBottom: "15px",
         overflow: "hidden",
+        boxSizing: "border-box",
       }}
     >
-      {/* Header Top */}
+      {/* Top */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          gap: 15,
-          flexWrap: "wrap",
+          gap: "15px",
         }}
       >
         {/* Logo */}
         <div
           style={{
-            width: 85,
-            height: 85,
+            width: "80px",
+            height: "80px",
             borderRadius: "50%",
             border: "2px solid #d4af37",
-            overflow: "hidden",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "#fff", 
+            overflow: "hidden",
+            background: "#fff",
             flexShrink: 0,
           }}
         >
           <img
-            src="/logo.png" // Agar aapka logo public folder me 'logo.png' ke naam se save hai
-            alt="Al Mukarram Travel & Tours"
+            src="/logo.png"
+            alt="Logo"
+            crossOrigin="anonymous"
+            loading="eager"
+            onError={(e) => {
+              e.target.style.display = "none";
+            }}
             style={{
-              width: "110%", // PNG ko proper size dene ke liye thoda badhaya hai
-              height: "110%",
+              width: "100%",
+              height: "100%",
               objectFit: "contain",
               display: "block",
             }}
           />
         </div>
 
-        {/* Company Info */}
+        {/* Company */}
         <div
           style={{
-            textAlign: "center",
             flex: 1,
-            minWidth: 0,
+            textAlign: "center",
           }}
         >
-          {/* Company Name */}
           <div
             style={{
-              fontSize: "clamp(18px, 4vw, 28px)",
-              fontWeight: 700,
-              letterSpacing: 0.5,
+              fontSize: "30px",
+              fontWeight: "bold",
               lineHeight: 1.2,
-              wordBreak: "break-word",
             }}
           >
             <span style={{ color: "#0b3d91" }}>
               AL MUKARRAM
-            </span>
-
-            <span
-              style={{
-                color: "#d4af37",
-                marginLeft: 8,
-              }}
-            >
+            </span>{" "}
+            <span style={{ color: "#d4af37" }}>
               TRAVEL & TOURS
             </span>
           </div>
 
-          {/* Golden Line */}
           <div
             style={{
-              width: 100,
-              height: 3,
+              width: "120px",
+              height: "3px",
+              background: "#d4af37",
               margin: "8px auto",
-              borderRadius: 20,
-              background:
-                "linear-gradient(to right,#d4af37,#ffd700,#d4af37)",
             }}
           />
 
-          {/* Address */}
           <div
             style={{
-              fontSize: "clamp(9px, 2vw, 10px)",
-              lineHeight: 1.4,
+              fontSize: "11px",
               color: "#0b3d91",
-              fontWeight: 600,
-              wordBreak: "break-word",
+              fontWeight: "600",
             }}
           >
-            Shop no 30,
-            Hoor Centre jodia Bazar
+            Shop No 30, Hoor Centre Jodia Bazar
             <br />
             Karachi
           </div>
 
-          {/* Contact */}
           <div
             style={{
-              marginTop: 4,
-              fontSize: "clamp(9px, 2vw, 10px)",
-              fontWeight: 600,
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: 4,
-              wordBreak: "break-word",
+              marginTop: "5px",
+              fontSize: "11px",
+              fontWeight: "600",
             }}
           >
             <span style={{ color: "#003366" }}>
-              📧 @gmail.com
+              📧 info@gmail.com
             </span>
 
             <span
               style={{
+                margin: "0 8px",
                 color: "#999",
-                margin: "0 4px",
               }}
             >
               |
             </span>
 
             <span style={{ color: "#198754" }}>
-              ☎️ 0324-2163293
+              ☎ 0324-2163293
             </span>
           </div>
         </div>
@@ -148,26 +128,23 @@ export default function Header({ title }) {
       {/* Divider */}
       <div
         style={{
-          height: 1,
-          marginTop: 8,
-          marginBottom: 8,
-          background:
-            "linear-gradient(to right,transparent,#d4af37,transparent)",
+          height: "1px",
+          background: "#d4af37",
+          margin: "10px 0",
         }}
       />
 
-      {/* Report Title */}
+      {/* Title */}
       <div
         style={{
           background: "#0b3d91",
           color: "#fff",
           textAlign: "center",
-          padding: "6px 10px",
-          borderRadius: 8,
-          fontSize: 15,
-          fontWeight: 700,
-          letterSpacing: 0.5,
-          wordBreak: "break-word",
+          padding: "8px",
+          borderRadius: "6px",
+          fontSize: "16px",
+          fontWeight: "bold",
+          letterSpacing: "0.5px",
         }}
       >
         {title}
