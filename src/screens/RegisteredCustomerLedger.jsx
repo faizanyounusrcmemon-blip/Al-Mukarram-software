@@ -936,8 +936,8 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
                 <div className="col-md-2">
                   <label className="form-label small text-muted mb-1">Transaction Type</label>
                   <select className="form-select" value={type} onChange={(e) => setType(e.target.value)}>
-                    <option value="payment">payment</option>
-                    <option value="adjustment">adjustment</option>
+                    <option value="payment">payment (Credit)</option>
+                    <option value="adjustment">adjustment (Credit)</option>
                     <option value="opening_balance">🔑 opening_balance (Debit)</option>
                   </select>
                 </div>
@@ -983,8 +983,8 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
                   <tr>
                     <th style={{ width: "12%" }}>Date</th>
                     <th style={{ width: "48%" }}>Details / Description</th>
-                    <th style={{ width: "12%" }} className="text-end">Debit (-)</th>
-                    <th style={{ width: "12%" }} className="text-end">Credit (+)</th>
+                    <th style={{ width: "12%" }} className="text-end">Debit (Dr)</th>
+                    <th style={{ width: "12%" }} className="text-end">Credit (Cr)</th>
                     <th style={{ width: "12%" }} className="text-end">Balance</th>
                     <th style={{ width: "4%" }} className="text-center">Action</th>
                   </tr>
