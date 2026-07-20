@@ -70,7 +70,9 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
   const [amountDisp, setAmountDisp] = useState("");
   const [date, setDate] = useState(getTodayInputDate());
   const [type, setType] = useState("payment");
-  const [method, setMethod] = useState("Bank");
+  const [method, setMethod] = useState("Cash");
+  const [bankProfiles, setBankProfiles] = useState([]);
+  const [selectedBankProfile, setSelectedBankProfile] = useState("");
   const [saving, setSaving] = useState(false);
 
   // Dynamic Detail Modal States
@@ -78,6 +80,20 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
   const [detailType, setDetailType] = useState("");
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailData, setDetailData] = useState(null);
+
+  /* =========================
+     LOAD BANK PROFILES
+  ========================== */
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/bank-ledger/profiles`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setBankProfiles(data.profiles || []);
+        }
+      })
+      .catch((err) => console.error("Error loading bank profiles:", err));
+  }, []);
 
   /* =========================
      LOAD PENDING CUSTOMERS
@@ -284,6 +300,9 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
     if (amountRaw <= 0) {
       return Swal.fire({ width: "300px", icon: "warning", text: "Please enter a valid amount" });
     }
+    if (method === "Bank" && !selectedBankProfile) {
+      return Swal.fire({ width: "300px", icon: "warning", text: "Please select a Bank Profile" });
+    }
 
     setSaving(true);
     Swal.fire({
@@ -302,6 +321,7 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
           amount: Number(amountRaw),
           payment_date: date || getTodayInputDate(),
           payment_method: method,
+          bank_profile_id: method === "Bank" ? selectedBankProfile : null,
           type
         }),
       });
@@ -313,6 +333,7 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
         setAmountRaw(0);
         setAmountDisp("");
         setDate(getTodayInputDate());
+        setSelectedBankProfile("");
         await loadLedger(customerCode);
         await loadPending();
         Swal.fire({ width: "280px", icon: "success", text: "Transaction Saved Successfully!" });
@@ -438,10 +459,25 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
             </div>
           </div>
           <div>
-            <label class="fw-bold mb-1">Payment Method</label>
+            <label class="fw-bold mb-1">Payment Method / Bank</label>
             <select id="swal-edit-method" class="form-select form-select-sm">
-              <option value="Bank" ${row.description?.includes("Bank") ? "selected" : ""}>Bank</option>
-              <option value="Cash" ${row.description?.includes("Cash") ? "selected" : ""}>Cash</option>
+              <option value="Cash" ${!row.bank_profile_id && (row.description?.includes("Cash") || !row.description?.includes("Bank")) ? "selected" : ""}>💵 Cash</option>
+              ${
+                bankProfiles.length > 0
+                  ? bankProfiles
+                      .map(
+                        (p) => `
+                        <option 
+                          value="Bank_${p.id}" 
+                          ${row.bank_profile_id == p.id ? "selected" : ""}
+                        >
+                          🏦 ${p.bank_name} (${p.account_number})
+                        </option>
+                      `
+                      )
+                      .join("")
+                  : `<option disabled>No Bank Profiles Found</option>`
+              }
             </select>
           </div>
           <div>
@@ -476,7 +512,7 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
       preConfirm: () => {
         const amount = document.getElementById("swal-edit-amount").value;
         const payment_date = document.getElementById("swal-edit-date").value;
-        const payment_method = document.getElementById("swal-edit-method").value;
+        const selectedVal = document.getElementById("swal-edit-method").value;
         const password = document.getElementById("swal-edit-pass").value.trim();
 
         if (!amount || Number(amount) <= 0) {
@@ -492,10 +528,19 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
           return false;
         }
 
+        let payment_method = "Cash";
+        let bank_profile_id = null;
+
+        if (selectedVal.startsWith("Bank_")) {
+          payment_method = "Bank";
+          bank_profile_id = selectedVal.split("_")[1];
+        }
+
         return {
           amount: Number(amount),
           payment_date,
           payment_method,
+          bank_profile_id,
           password,
           type: row.type || "payment"
         };
@@ -861,7 +906,7 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
             <div className="card-header bg-dark text-white fw-bold">📥 Post New Payment / Receipt</div>
             <div className="card-body">
               <div className="row g-2 mb-3">
-                <div className="col-md-3">
+                <div className="col-md-2">
                   <label className="form-label small text-muted mb-1">Receipt Date</label>
                   <input type="date" className="form-control" value={date} onChange={(e) => setDate(e.target.value)} />
                   <span className="text-primary fw-bold d-block mt-1" style={{ fontSize: "0.75rem" }}>
@@ -888,7 +933,7 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
                     </div>
                   )}
                 </div>
-                <div className="col-md-3">
+                <div className="col-md-2">
                   <label className="form-label small text-muted mb-1">Transaction Type</label>
                   <select className="form-select" value={type} onChange={(e) => setType(e.target.value)}>
                     <option value="payment">payment</option>
@@ -896,13 +941,30 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
                     <option value="opening_balance">🔑 opening_balance (Debit)</option>
                   </select>
                 </div>
-                <div className="col-md-3">
+                <div className="col-md-2">
                   <label className="form-label small text-muted mb-1">Payment Method</label>
                   <select className="form-select" value={method} onChange={(e) => setMethod(e.target.value)}>
-                    <option value="Bank">Bank</option>
                     <option value="Cash">Cash</option>
+                    <option value="Bank">Bank</option>
                   </select>
                 </div>
+                {method === "Bank" && (
+                  <div className="col-md-3">
+                    <label className="form-label small text-muted mb-1">Select Bank Account</label>
+                    <select
+                      className="form-select fw-bold"
+                      value={selectedBankProfile}
+                      onChange={(e) => setSelectedBankProfile(e.target.value)}
+                    >
+                      <option value="">-- Choose Bank --</option>
+                      {bankProfiles.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.bank_name} ({p.account_number})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
               <button className="btn btn-success px-4 fw-bold" disabled={saving || !customerCode} onClick={saveEntry}>
                 {saving ? "Saving Entry..." : "💾 Save Entry"}
