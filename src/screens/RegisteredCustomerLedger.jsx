@@ -983,8 +983,8 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
                   <tr>
                     <th style={{ width: "12%" }}>Date</th>
                     <th style={{ width: "48%" }}>Details / Description</th>
-                    <th style={{ width: "12%" }} className="text-end">Debit (+) / Invoices</th>
-                    <th style={{ width: "12%" }} className="text-end">Credit (-) / Payments</th>
+                    <th style={{ width: "12%" }} className="text-end">Debit (-)</th>
+                    <th style={{ width: "12%" }} className="text-end">Credit (+)</th>
                     <th style={{ width: "12%" }} className="text-end">Balance</th>
                     <th style={{ width: "4%" }} className="text-center">Action</th>
                   </tr>
