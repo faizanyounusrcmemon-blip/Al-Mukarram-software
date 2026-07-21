@@ -95,20 +95,50 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
       .catch((err) => console.error("Error loading bank profiles:", err));
   }, []);
 
-  /* =========================
-     LOAD PENDING CUSTOMERS
-  ========================== */
-  const loadPending = async () => {
-    try {
-      const r = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/registered-ledger/pending/list`);
-      const d = await r.json();
-      if (d.success) {
-        setPending(d.rows || []);
-      }
-    } catch (e) {
-      console.error("Error loading pending registered users:", e);
+/* =========================
+   FIXED: LOAD PENDING CUSTOMERS ONLY BY CODE
+========================== */
+const loadPending = async () => {
+  try {
+    const r = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/registered-ledger/pending/list`);
+    const d = await r.json();
+    if (d.success) {
+      const rawList = d.rows || [];
+      const uniqueCustomersMap = new Map();
+
+      rawList.forEach((item) => {
+        // Customer Code ko strict sanitize karke filter karna
+        const code = String(item.customer_code || "").trim().toUpperCase();
+
+        // Check: Agar Ref No ya Sale No galti se aaye (e.g. HOT-, PKG-, TIC-) toh usko filter out karein
+        const isIndividualInvoiceRef = /^(HOT-|PKG-|TIC-|VISA-|ZIY-|TRN-|CARD-|GRP-)/i.test(code);
+
+        if (!code || isIndividualInvoiceRef) return;
+
+        const bal = Number(item.remaining_balance || item.balance || 0);
+
+        if (!uniqueCustomersMap.has(code)) {
+          uniqueCustomersMap.set(code, {
+            customer_code: code,
+            customer_name: item.customer_name || "Registered Customer",
+            remaining_balance: bal,
+            payment_status: item.payment_status || (bal < 0 ? "EXTRA PAID" : "PENDING")
+          });
+        } else {
+          const existing = uniqueCustomersMap.get(code);
+          existing.remaining_balance += bal;
+          if (existing.remaining_balance < 0) {
+            existing.payment_status = "EXTRA PAID";
+          }
+        }
+      });
+
+      setPending(Array.from(uniqueCustomersMap.values()));
     }
-  };
+  } catch (e) {
+    console.error("Error loading pending registered users:", e);
+  }
+};
 
   useEffect(() => {
     loadPending();
@@ -161,7 +191,7 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
   /* =========================
      FETCH SALE DETAIL MODAL
   ========================== */
-  const handleSuccessResponse = (data, ledgerDebitVal, originalId, currentType) => {
+  const handleSuccessResponse = (data, ledgerCreditVal, originalId, currentType) => {
     if (data.success && data.row) {
       const row = data.row;
 
@@ -180,7 +210,7 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
         row.rows = safeParse(row.rows);
       }
 
-      row.total_pkr = Number(row.total_pkr || row.grand_total || row.total_amount || row.total_amount_pkr || ledgerDebitVal || 0);
+      row.total_pkr = Number(row.total_pkr || row.grand_total || row.total_amount || row.total_amount_pkr || ledgerCreditVal || 0);
       row.grand_total = row.total_pkr;
       row.total_amount = row.total_pkr;
 
@@ -191,9 +221,9 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
         customer_name: customerName,
         booking_date: getTodayInputDate(),
         description: "",
-        total_pkr: ledgerDebitVal,
-        grand_total: ledgerDebitVal,
-        total_amount: ledgerDebitVal
+        total_pkr: ledgerCreditVal,
+        grand_total: ledgerCreditVal,
+        total_amount: ledgerCreditVal
       });
     }
   };
@@ -209,7 +239,7 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
     }
 
     const matchedLedgerRow = rows.find(r => String(r.id) === idStr);
-    const ledgerDebitVal = matchedLedgerRow ? Number(matchedLedgerRow.debit || 0) : 0;
+    const ledgerCreditVal = matchedLedgerRow ? Number(matchedLedgerRow.credit || 0) : 0;
 
     if (cleanRef.startsWith("TIC-")) {
       detectedType = "TICKETING";
@@ -248,9 +278,9 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
         customer_name: customerName,
         booking_date: matchedLedgerRow?.date || getTodayInputDate(),
         description: description,
-        total_pkr: ledgerDebitVal,
-        grand_total: ledgerDebitVal,
-        total_amount: ledgerDebitVal,
+        total_pkr: ledgerCreditVal,
+        grand_total: ledgerCreditVal,
+        total_amount: ledgerCreditVal,
         total_sar: 0,
         pkr_rate: 0
       });
@@ -271,7 +301,7 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
           const altRes = await fetch(retryUrl);
           if (altRes.ok) {
             const altData = await altRes.json();
-            return handleSuccessResponse(altData, ledgerDebitVal, cleanRef, detectedType);
+            return handleSuccessResponse(altData, ledgerCreditVal, cleanRef, detectedType);
           }
         }
       }
@@ -281,7 +311,7 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
       }
 
       const data = await res.json();
-      handleSuccessResponse(data, ledgerDebitVal, cleanRef, detectedType);
+      handleSuccessResponse(data, ledgerCreditVal, cleanRef, detectedType);
     } catch (err) {
       console.error("Error fetching detail:", err);
       useBackupFallback();
@@ -636,8 +666,8 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
           pdf.setFontSize(9);
           pdf.text("Date", 13, 60.5);
           pdf.text("Description", 35, 60.5);
-          pdf.text("Debit (Dr)", pageWidth - 80, 60.5, { align: "right" });
-          pdf.text("Credit (Cr)", pageWidth - 50, 60.5, { align: "right" });
+          pdf.text("Debit (-)", pageWidth - 80, 60.5, { align: "right" });
+          pdf.text("Credit (+)", pageWidth - 50, 60.5, { align: "right" });
           pdf.text("Balance", pageWidth - 14, 60.5, { align: "right" });
         };
 
@@ -709,7 +739,7 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
           [""]
         ];
 
-        const tableHeaders = ["Date", "Description", "Debit (Dr)", "Credit (Cr)", "Balance"];
+        const tableHeaders = ["Date", "Description", "Debit (-)", "Credit (+)", "Balance"];
 
         const tableData = rows.map((r) => [
           getRowDate(r),
@@ -786,7 +816,7 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
       detailData.grand_total ||
       detailData.total_amount ||
       detailData.total_amount_pkr ||
-      detailData.debit ||
+      detailData.credit ||
       0
     );
   };
@@ -836,7 +866,11 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
                       }}
                     >
                       <div className="d-flex justify-content-between align-items-start mb-1">
-                        <span className="badge bg-dark font-monospace" style={{ fontSize: "0.75rem" }}>{p.customer_code}</span>
+                        {/* Always displays unique Customer Code */}
+                        {/* Always displays strictly Customer Code */}
+<span className="badge bg-dark font-monospace" style={{ fontSize: "0.75rem" }}>
+  {p.customer_code}
+</span>
                         <span className={`badge py-0 px-1 ${
                           p.payment_status === "PENDING" ? "bg-danger" :
                           p.payment_status === "EXTRA PAID" ? "bg-success" : "bg-warning text-dark"
@@ -936,9 +970,9 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
                 <div className="col-md-2">
                   <label className="form-label small text-muted mb-1">Transaction Type</label>
                   <select className="form-select" value={type} onChange={(e) => setType(e.target.value)}>
-                    <option value="payment">payment (Credit)</option>
-                    <option value="adjustment">adjustment (Credit)</option>
-                    <option value="opening_balance">🔑 opening_balance (Debit)</option>
+                    <option value="payment">payment</option>
+                    <option value="adjustment">adjustment</option>
+                    <option value="opening_balance">🔑 opening_balance (Credit)</option>
                   </select>
                 </div>
                 <div className="col-md-2">
@@ -983,8 +1017,8 @@ export default function RegisteredCustomerLedger({ onNavigate }) {
                   <tr>
                     <th style={{ width: "12%" }}>Date</th>
                     <th style={{ width: "48%" }}>Details / Description</th>
-                    <th style={{ width: "12%" }} className="text-end">Debit (Dr)</th>
-                    <th style={{ width: "12%" }} className="text-end">Credit (Cr)</th>
+                    <th style={{ width: "12%" }} className="text-end">Debit (-)</th>
+                    <th style={{ width: "12%" }} className="text-end">Credit (+)</th>
                     <th style={{ width: "12%" }} className="text-end">Balance</th>
                     <th style={{ width: "4%" }} className="text-center">Action</th>
                   </tr>
