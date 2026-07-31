@@ -75,7 +75,7 @@ export default function Navbar({ onNavigate }) {
   return (
     <nav className="vip-navbar">
       <div className="nav-logo" onClick={() => go("dashboard")}>
-        ✈ AL MUKARRAM Travel & TOURS
+        ✈ AL MUKARRAM TRAVEL & TOURS
       </div>
 
       <div className="nav-links">
