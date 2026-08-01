@@ -462,8 +462,8 @@ const loadPending = async () => {
     }
   };
 
-  /* =========================
-     EDIT ROW
+/* =========================
+     EDIT ROW (FIXED WITH TYPE SELECTOR)
   ========================== */
   const editRow = async (row) => {
     if (String(row.id).startsWith("SALE-") || String(row.id).startsWith("TIC-") || String(row.id).startsWith("HOT-")) {
@@ -471,6 +471,7 @@ const loadPending = async () => {
     }
 
     const formattedDate = toInputDate(row.date || row.payment_date) || getTodayInputDate();
+    const currentType = row.type || "payment";
 
     const { value: formValues } = await Swal.fire({
       width: "360px",
@@ -480,6 +481,14 @@ const loadPending = async () => {
           <div>
             <label class="fw-bold mb-1">Amount (PKR)</label>
             <input id="swal-edit-amount" type="number" class="form-control form-control-sm" value="${row.debit || row.credit || 0}" />
+          </div>
+          <div>
+            <label class="fw-bold mb-1">Transaction Type</label>
+            <select id="swal-edit-type" class="form-select form-select-sm">
+              <option value="payment" ${currentType === "payment" ? "selected" : ""}>payment</option>
+              <option value="adjustment" ${currentType === "adjustment" ? "selected" : ""}>adjustment</option>
+              <option value="opening_balance" ${currentType === "opening_balance" ? "selected" : ""}>🔑 opening_balance (Credit)</option>
+            </select>
           </div>
           <div>
             <label class="fw-bold mb-1">Receipt Date</label>
@@ -541,6 +550,7 @@ const loadPending = async () => {
       },
       preConfirm: () => {
         const amount = document.getElementById("swal-edit-amount").value;
+        const selectedType = document.getElementById("swal-edit-type").value;
         const payment_date = document.getElementById("swal-edit-date").value;
         const selectedVal = document.getElementById("swal-edit-method").value;
         const password = document.getElementById("swal-edit-pass").value.trim();
@@ -572,7 +582,7 @@ const loadPending = async () => {
           payment_method,
           bank_profile_id,
           password,
-          type: row.type || "payment"
+          type: selectedType
         };
       }
     });

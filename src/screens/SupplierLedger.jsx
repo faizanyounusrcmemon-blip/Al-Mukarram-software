@@ -364,13 +364,22 @@ const loadPendingAlways = async () => {
     }
   };
 
-  /* ====================================================
-     EDIT ENTRY WITH BANK SELECTION
+/* ====================================================
+     EDIT ENTRY WITH TYPE & BANK SELECTION
   ==================================================== */
   const editEntry = async (entry) => {
     if (entry.entry_type !== "payment" || !entry.id) return;
 
     const formattedDate = entry.date ? new Date(entry.date).toISOString().split('T')[0] : today;
+
+    // Detect current type for pre-selecting in dropdown
+    let currentTypeVal = "payment";
+    const rawType = (entry.type || "").toLowerCase();
+    if (rawType.includes("opening")) {
+      currentTypeVal = "opening_balance";
+    } else if (rawType.includes("adjust")) {
+      currentTypeVal = "adjustment";
+    }
 
     const { value: formValues } = await Swal.fire({
       width: "360px",
@@ -387,6 +396,14 @@ const loadPendingAlways = async () => {
             <div id="swal-edit-date-text" class="text-primary fw-bold mt-1" style="font-size: 11px;">
               ${formatDate(formattedDate)}
             </div>
+          </div>
+          <div>
+            <label class="fw-bold mb-1">Entry Type</label>
+            <select id="swal-edit-type" class="form-select form-select-sm">
+              <option value="payment" ${currentTypeVal === "payment" ? "selected" : ""}>Payment</option>
+              <option value="adjustment" ${currentTypeVal === "adjustment" ? "selected" : ""}>Adjustment</option>
+              <option value="opening_balance" ${currentTypeVal === "opening_balance" ? "selected" : ""}>🔑 Opening Balance</option>
+            </select>
           </div>
           <div>
             <label class="fw-bold mb-1">Payment Method / Bank</label>
@@ -445,6 +462,7 @@ const loadPendingAlways = async () => {
         const amount = document.getElementById("swal-edit-amount").value;
         const payment_date = document.getElementById("swal-edit-date").value;
         const selectedVal = document.getElementById("swal-edit-method").value;
+        const selectedType = document.getElementById("swal-edit-type").value;
         const password = document.getElementById("swal-edit-pass").value.trim();
 
         if (!amount || amount <= 0) {
@@ -470,7 +488,7 @@ const loadPendingAlways = async () => {
           payment_method,
           bank_profile_id,
           password,
-          type: entry.type === "Opening Bal" || entry.type === "opening_balance" ? "opening_balance" : (entry.type === "Adjustment" ? "adjustment" : "payment")
+          type: selectedType // ✨ Sends exact selected type ('payment', 'adjustment', 'opening_balance')
         };
       }
     });
