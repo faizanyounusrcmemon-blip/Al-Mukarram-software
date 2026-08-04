@@ -1,8 +1,141 @@
 import React, { useState, useEffect } from "react";
-import API from "../api"; // ✅ Central configuration setup untouched
+import API from "../api";
 import Swal from "sweetalert2";
-import ArchiveDashboard from "../components/ArchiveDashboard";
 
+// Helper Function for Date Format: DD/MMM/YYYY (e.g. 01/Jul/2026)
+const formatCustomDate = (dateStr) => {
+  if (!dateStr) return "-";
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return dateStr;
+
+  const day = String(date.getDate()).padStart(2, "0");
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const month = months[date.getMonth()];
+  const year = date.getFullYear();
+
+  return `${day}/${month}/${year}`;
+};
+
+// 🌟 REUSABLE PROGRESS BAR MODAL FOR ALL ACTIONS
+const showProgressModal = (title, barColor = "#2563eb", statusText = "Processing request...") => {
+  let percent = 0;
+  
+  Swal.fire({
+    title: title,
+    background: "#1e293b",
+    color: "#f8fafc",
+    html: `
+      <div style="margin-top:15px">
+        <div style="width:100%; height:20px; background:#0f172a; border-radius:50px; overflow:hidden; border:1px solid #334155;">
+          <div id="swalProgressBar" style="width:0%; height:100%; background:${barColor}; transition:width .2s ease;"></div>
+        </div>
+        <div id="swalProgressPercent" style="margin-top:10px; font-size:16px; font-weight:800; color:#38bdf8;">0%</div>
+        <div style="margin-top:5px; font-size:12px; color:#94a3b8;">${statusText}</div>
+      </div>
+    `,
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    showConfirmButton: false,
+  });
+
+  const timer = setInterval(() => {
+    if (percent >= 90) return;
+    percent += 5;
+    const bar = document.getElementById("swalProgressBar");
+    const txt = document.getElementById("swalProgressPercent");
+    if (bar) bar.style.width = `${percent}%`;
+    if (txt) txt.innerHTML = `${percent}%`;
+  }, 150);
+
+  return {
+    finish: () => {
+      clearInterval(timer);
+      const bar = document.getElementById("swalProgressBar");
+      const txt = document.getElementById("swalProgressPercent");
+      if (bar) bar.style.width = "100%";
+      if (txt) txt.innerHTML = "100%";
+    },
+    updateProgress: (loadedPercent) => {
+      const bar = document.getElementById("swalProgressBar");
+      const txt = document.getElementById("swalProgressPercent");
+      if (bar) bar.style.width = `${loadedPercent}%`;
+      if (txt) txt.innerHTML = `${loadedPercent}%`;
+    },
+    stop: () => clearInterval(timer)
+  };
+};
+
+/* ================= ARCHIVE DASHBOARD COMPONENT ================= */
+function ArchiveDashboard() {
+  const [liveStartDate, setLiveStartDate] = useState("Loading...");
+  const [checkingTables, setCheckingTables] = useState(false);
+
+  const targetTables = [
+    "bookings", "hotels", "visa", "card", "ticketing", "transport", "ziyarat", "groups",
+    "purchase_entries", "customer_payments", "supplier_payments", "expense_ledger",
+    "bank_transactions", "cash_transactions"
+  ];
+
+  useEffect(() => {
+    fetchLiveDatabaseStartDate();
+  }, []);
+
+  const fetchLiveDatabaseStartDate = async () => {
+    try {
+      setCheckingTables(true);
+      const res = await API.get("/archive/live-data-start");
+
+      if (res.data.success && res.data.first_date) {
+        setLiveStartDate(formatCustomDate(res.data.first_date));
+      } else {
+        setLiveStartDate("No Data Found");
+      }
+    } catch (err) {
+      console.error("Error fetching live start date:", err);
+      setLiveStartDate("Error Loading");
+    } finally {
+      setCheckingTables(false);
+    }
+  };
+
+  return (
+    <div style={styles.dashboardCard}>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "16px" }}>
+        <div style={{ flex: 1, minWidth: "280px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+            <span style={styles.dashboardTitle}>
+              DATABASE LIVE CONNECTION {checkingTables && "⏳ Scanning..."}
+            </span>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", margin: "8px 0" }}>
+            <span style={{ fontSize: "14px", color: "#94a3b8" }}>
+              Live database transactions start date:
+            </span>
+            <span style={styles.dateBadge}>
+              📅 {liveStartDate}
+            </span>
+          </div>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "12px", alignItems: "center" }}>
+            <small style={{ color: "#64748b", fontWeight: "600", fontSize: "11px", marginRight: "4px" }}>Checked Tables:</small>
+            {targetTables.map((tbl) => (
+              <span key={tbl} style={styles.tableChip}>
+                {tbl}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div style={styles.tipBox}>
+          💡 <strong style={{ color: "#f8fafc" }}>Important Tip:</strong> Snapshot create karte waqt <span style={{ color: "#38bdf8", fontWeight: "600" }}>"START DATE"</span> yahan se dekh kar set karein.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================= ARCHIVE MANAGER MAIN COMPONENT ================= */
 export default function ArchiveManager({ onNavigate }) {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -27,75 +160,115 @@ export default function ArchiveManager({ onNavigate }) {
     loadList();
   }, []);
 
-  const checkPassword = async () => {
+  // 🔐 DYNAMIC PASSWORD CHECKER
+  const checkPassword = async (actionName = "Archive Access") => {
     let showPassword = false;
     const result = await Swal.fire({
-      title: "🔐 Archive Access",
+      title: `<div style="font-size:15px; font-weight:700; color:#f8fafc; line-height:1.4;">
+                🔐 Action Verification<br>
+                <span style="font-size:12px; color:#38bdf8; font-weight:600;">[ ${actionName} ]</span>
+              </div>`,
       html: `
-        <div style="position:relative">
-          <input id="archive-password" type="password" class="swal2-input" placeholder="Enter Password" style="margin:0;width:100%;padding-right:45px" />
-          <button id="toggle-password" type="button" style="position:absolute;right:8px;top:8px;border:none;background:none;cursor:pointer;font-size:18px;">👁️</button>
+        <div style="position:relative; margin-top:12px;">
+          <input id="archive-password" type="password" placeholder="Enter Password" 
+            style="width:100%; padding:9px 38px 9px 12px; background:#0f172a; border:1px solid #334155; color:#f8fafc; border-radius:8px; font-size:13px; outline:none; box-sizing:border-box;" />
+          <button id="toggle-password" type="button" 
+            style="position:absolute; right:10px; top:50%; transform:translateY(-50%); border:none; background:none; cursor:pointer; font-size:15px; color:#94a3b8; padding:0; display:flex; align-items:center;">👁️</button>
         </div>
       `,
-      width: 350,
+      width: 310,
+      padding: "16px",
+      background: "#1e293b",
       showCancelButton: true,
-      confirmButtonText: "Login",
+      confirmButtonText: "Confirm",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#2563eb",
+      cancelButtonColor: "#334155",
       focusConfirm: false,
       didOpen: () => {
         const input = document.getElementById("archive-password");
         const btn = document.getElementById("toggle-password");
-        btn.addEventListener("click", () => {
-          showPassword = !showPassword;
-          input.type = showPassword ? "text" : "password";
-          btn.innerHTML = showPassword ? "🙈" : "👁️";
-        });
+        
+        if (input) input.focus();
+
+        if (btn && input) {
+          btn.addEventListener("click", () => {
+            showPassword = !showPassword;
+            input.type = showPassword ? "text" : "password";
+            btn.innerHTML = showPassword ? "🙈" : "👁️";
+          });
+        }
       },
-      preConfirm: () => document.getElementById("archive-password").value
+      preConfirm: () => {
+        const val = document.getElementById("archive-password").value;
+        if (!val) {
+          Swal.showValidationMessage("Password is required");
+        }
+        return val;
+      }
     });
 
     const password = result.value;
     if (!password) return false;
-    if (password === "faizan") return true;
 
-    Swal.close();
-    await Swal.fire({ icon: "error", title: "Wrong Password", text: "Access Denied", width: 320 });
+    try {
+      const res = await API.post("/archive/verify-password", {
+        key_name: "archive_management_pass",
+        password: password
+      });
+
+      if (res.data.success) {
+        return true;
+      }
+    } catch (err) {
+      Swal.close();
+      await Swal.fire({ 
+        icon: "error", 
+        title: "Wrong Password", 
+        text: err.response?.data?.error || "Access Denied", 
+        width: 300,
+        background: "#1e293b",
+        color: "#f8fafc"
+      });
+      return false;
+    }
+
     return false;
   };
 
-  const showLoading = (text = "Processing...") => {
-    Swal.close();
-    Swal.fire({
-      title: text,
-      html: `<div style="margin-top:15px; font-size:18px;">⏳ Please wait...<br/>System is working</div>`,
-      width: 320,
-      allowOutsideClick: false,
-      allowEscapeKey: false,
-      didOpen: () => { Swal.showLoading(); }
-    });
-  };
-
+  // 1ST STEP PREVIEW (WITH PROGRESS BAR)
   const handlePreview = async () => {
     if (!from || !to) {
-      return Swal.fire("Error", "Date range required", "error");
+      return Swal.fire({ icon: "error", title: "Error", text: "Date range required", background: "#1e293b", color: "#f8fafc" });
     }
+
+    const prog = showProgressModal("🔍 Generating Preview...", "#334155", "Fetching operational stats from live db...");
+
     try {
       setLoading(true);
       const res = await API.post("/archive/preview", { date_from: from, date_to: to });
+      prog.finish();
+      await new Promise(r => setTimeout(r, 300));
+      Swal.close();
+
       if (res.data.success) {
         setPreview(res.data);
       }
     } catch (err) {
-      Swal.fire("Error", err.response?.data?.error || err.message, "error");
+      prog.stop();
+      Swal.close();
+      Swal.fire({ icon: "error", title: "Error", text: err.response?.data?.error || err.message, background: "#1e293b", color: "#f8fafc" });
     } finally {
       setLoading(false);
     }
   };
 
+  // 2ND STEP SNAPSHOT (WITH PROGRESS BAR)
   const handleSnapshot = async () => {
-    if (!(await checkPassword())) return;
+    if (!(await checkPassword("Create Snapshot"))) return;
     if (!from || !to) {
       Swal.close();
-      return Swal.fire({ icon: "error", title: "Date Required", text: "Please select dates", width: 320 });
+      return Swal.fire({ icon: "error", title: "Date Required", text: "Please select dates", width: 320, background: "#1e293b", color: "#f8fafc" });
     }
 
     const confirm = await Swal.fire({
@@ -104,14 +277,21 @@ export default function ArchiveManager({ onNavigate }) {
       icon: "warning",
       width: 320,
       showCancelButton: true,
-      confirmButtonText: "Create"
+      confirmButtonText: "Create",
+      background: "#1e293b",
+      color: "#f8fafc"
     });
     if (!confirm.isConfirmed) return;
 
+    const prog = showProgressModal("💾 Creating Archive Snapshot...", "#2563eb", "Processing balances and calculating table records...");
+
     try {
       setLoading(true);
-      showLoading("Creating Snapshot...");
       const res = await API.post("/archive/snapshot", { from_date: from, to_date: to });
+      prog.finish();
+      await new Promise(r => setTimeout(r, 300));
+      Swal.close();
+
       if (res.data.success) {
         const newSnapshotId = res.data.snapshotId;
         setSnapshotId(newSnapshotId);
@@ -125,16 +305,18 @@ export default function ArchiveManager({ onNavigate }) {
           opening_bank: res.data.opening_bank !== undefined ? res.data.opening_bank : prev?.opening_bank,
           opening_profit: res.data.opening_profit !== undefined ? res.data.opening_profit : prev?.opening_profit,
           customers: res.data.customers || prev?.customers || [],
-          suppliers: res.data.suppliers || prev?.suppliers || []
+          suppliers: res.data.suppliers || prev?.suppliers || [],
+          bank_balances: res.data.bank_balances || prev?.bank_balances || []
         }));
 
-        Swal.close();
         await Swal.fire({
           icon: "success",
-          title: "Snapshot Created",
+          title: "Snapshot Created ✅",
           width: 320,
+          background: "#1e293b",
+          color: "#f8fafc",
           html: `
-            <div style="text-align:left">
+            <div style="text-align:left; font-size: 14px; color:#cbd5e1;">
               <b>ID:</b> ${newSnapshotId}<br><br>
               <b>Customers:</b> ${res.data.customerCount || 0}<br>
               <b>Suppliers:</b> ${res.data.supplierCount || 0}<br>
@@ -147,34 +329,52 @@ export default function ArchiveManager({ onNavigate }) {
         loadList();
       }
     } catch (err) {
+      prog.stop();
       Swal.close();
-      Swal.fire({ icon: "error", title: "Server Error", text: err.response?.data?.error || err.message, width: 320 });
+      Swal.fire({ icon: "error", title: "Server Error", text: err.response?.data?.error || err.message, width: 320, background: "#1e293b", color: "#f8fafc" });
     } finally {
       setLoading(false);
     }
   };
 
+  // 3RD STEP DOWNLOAD ZIP (WITH REAL-TIME DOWNLOAD PROGRESS BAR)
   const handleBackup = async () => {
-    if (!(await checkPassword())) return;
+    if (!(await checkPassword("Download ZIP Backup"))) return;
     if (!from || !to) {
       Swal.close();
-      return Swal.fire({ icon: "error", title: "Date Required", text: "Select dates", width: 320 });
+      return Swal.fire({ icon: "error", title: "Date Required", text: "Select dates", width: 320, background: "#1e293b", color: "#f8fafc" });
     }
 
     const confirm = await Swal.fire({
-      title: "Create Backup?",
+      title: "Download ZIP Backup?",
       text: "ZIP backup stream will start.",
       icon: "question",
       width: 320,
       showCancelButton: true,
-      confirmButtonText: "Download"
+      confirmButtonText: "Download",
+      background: "#1e293b",
+      color: "#f8fafc"
     });
     if (!confirm.isConfirmed) return;
 
+    const prog = showProgressModal("📦 Streaming ZIP Backup...", "#0284c7", "Building ZIP file package from database...");
+
     try {
       setLoading(true);
-      showLoading("Streaming ZIP Backup from Server...");
-      const response = await API.get(`/archive/download-stream?fromDate=${from}&toDate=${to}`, { responseType: "blob" });
+      const response = await API.get(`/archive/download-stream?fromDate=${from}&toDate=${to}`, {
+        responseType: "blob",
+        onDownloadProgress: (e) => {
+          if (e.total) {
+            const p = Math.round((e.loaded * 100) / e.total);
+            prog.updateProgress(p);
+          }
+        }
+      });
+
+      prog.finish();
+      await new Promise(r => setTimeout(r, 300));
+      Swal.close();
+
       const blob = new Blob([response.data], { type: "application/zip" });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -184,79 +384,120 @@ export default function ArchiveManager({ onNavigate }) {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-      Swal.close();
       loadList();
     } catch (err) {
+      prog.stop();
       Swal.close();
-      Swal.fire({ icon: "error", title: "Streaming Error", text: err.message, width: 320 });
+      Swal.fire({ icon: "error", title: "Streaming Error", text: err.message, width: 320, background: "#1e293b", color: "#f8fafc" });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRestore = async () => {
-    if (!(await checkPassword())) return;
-    const { value: file } = await Swal.fire({
-      title: "📤 Upload Backup ZIP",
-      input: "file",
-      inputAttributes: { accept: ".zip" },
-      showCancelButton: true
-    });
-    if (!file) return;
-
-    const confirm = await Swal.fire({ title: "⚠️ ARE YOU SURE?", text: "This will restore data!", icon: "warning", showCancelButton: true });
-    if (!confirm.isConfirmed) return;
-
-    try {
-      setLoading(true);
-      showLoading("Restoring Database...");
-      const formData = new FormData();
-      formData.append("backup_file", file);
-      const res = await API.post("/archive/restore", formData, { headers: { "Content-Type": "multipart/form-data" } });
-      Swal.close();
-      if (res.data.success) {
-        await Swal.fire({ icon: "success", title: "System Restored!", width: 320 });
-        loadList();
-      }
-    } catch (err) {
-      Swal.close();
-      Swal.fire({ icon: "error", title: "Server Error", text: err.message, width: 320 });
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // 4TH STEP DELETE LIVE DATA (WITH PROGRESS BAR)
   const handleDelete = async () => {
-    if (!(await checkPassword())) return;
-    Swal.close();
+    if (!(await checkPassword("Delete Live Data"))) return;
+    if (!from || !to) {
+      return Swal.fire({ icon: "error", title: "Date Required", text: "Select dates first", width: 320, background: "#1e293b", color: "#f8fafc" });
+    }
+
     const confirm = await Swal.fire({ 
       title: "Delete Live Data?", 
       text: "Warning: This will clear the live operational data. Make sure backup is created first!", 
       icon: "warning", 
-      showCancelButton: true 
+      showCancelButton: true,
+      confirmButtonText: "Yes, Delete",
+      confirmButtonColor: "#991b1b",
+      background: "#1e293b",
+      color: "#f8fafc"
     });
     if (!confirm.isConfirmed) return;
 
+    const prog = showProgressModal("🔥 Wiping Live System Data...", "#dc2626", "Clearing transactions and archiving state...");
+
     try {
-      showLoading("Wiping Live System Data...");
-      const res = await API.post("/archive/live-data-start", { 
+      const res = await API.post("/archive/delete", { 
         from_date: from, 
         to_date: to 
       });
+
+      prog.finish();
+      await new Promise(r => setTimeout(r, 300));
+      Swal.close();
       
       if (res.data.success) {
-        Swal.close();
-        await Swal.fire({ icon: "success", title: "Wiped Successfully", text: "Live data has been cleared.", width: 320 });
+        await Swal.fire({ icon: "success", title: "Wiped Successfully ✅", text: "Live data has been cleared.", width: 320, background: "#1e293b", color: "#f8fafc" });
+        setPreview(null);
+        loadList();
+      } else {
+        Swal.fire({ icon: "error", title: "Error", text: res.data.error || "Failed to delete live data", background: "#1e293b", color: "#f8fafc" });
+      }
+    } catch (err) {
+      prog.stop();
+      Swal.close();
+      Swal.fire({ icon: "error", title: "Error", text: err.response?.data?.error || err.message, background: "#1e293b", color: "#f8fafc" });
+    }
+  };
+
+  // RESTORE ZIP (WITH UPLOAD PROGRESS BAR)
+  const handleRestore = async () => {
+    if (!(await checkPassword("Restore ZIP Backup"))) return;
+    const { value: file } = await Swal.fire({
+      title: "📤 Upload Backup ZIP",
+      input: "file",
+      inputAttributes: { accept: ".zip" },
+      showCancelButton: true,
+      background: "#1e293b",
+      color: "#f8fafc"
+    });
+    if (!file) return;
+
+    const confirm = await Swal.fire({ 
+      title: "⚠️ ARE YOU SURE?", 
+      text: "This will restore data!", 
+      icon: "warning", 
+      showCancelButton: true,
+      background: "#1e293b",
+      color: "#f8fafc" 
+    });
+    if (!confirm.isConfirmed) return;
+
+    const prog = showProgressModal("📤 Restoring Database...", "#d97706", "Uploading ZIP and unzipping SQL database tables...");
+
+    try {
+      setLoading(true);
+      const formData = new FormData();
+      formData.append("backup_file", file);
+      
+      const res = await API.post("/archive/restore", formData, { 
+        headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: (e) => {
+          if (e.total) {
+            const p = Math.round((e.loaded * 100) / e.total);
+            prog.updateProgress(p);
+          }
+        }
+      });
+
+      prog.finish();
+      await new Promise(r => setTimeout(r, 300));
+      Swal.close();
+
+      if (res.data.success) {
+        await Swal.fire({ icon: "success", title: "System Restored! ✅", width: 320, background: "#1e293b", color: "#f8fafc" });
         loadList();
       }
     } catch (err) {
+      prog.stop();
       Swal.close();
-      Swal.fire("Error", err.response?.data?.error || err.message, "error");
+      Swal.fire({ icon: "error", title: "Server Error", text: err.message, width: 320, background: "#1e293b", color: "#f8fafc" });
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleView = async (id) => {
-    if (!(await checkPassword())) return;
+    if (!(await checkPassword(`Inspect Snapshot #${id}`))) return;
     try {
       const res = await API.get(`/archive/view/${id}`);
       if (res.data.success) {
@@ -264,18 +505,33 @@ export default function ArchiveManager({ onNavigate }) {
         setSnapshotId(id);
       }
     } catch (err) {
-      Swal.fire("Error", "Failed to fetch archive view data", "error");
+      Swal.fire({ icon: "error", title: "Error", text: "Failed to fetch archive view data", background: "#1e293b", color: "#f8fafc" });
     }
   };
 
+  // TABLE PULL ZIP (WITH DOWNLOAD PROGRESS BAR)
   const handleDownload = async (id) => {
-    if (!(await checkPassword())) return;
+    if (!(await checkPassword(`Pull ZIP Stream #${id}`))) return;
     const targetItem = list.find(item => item.id === id);
-    if (!targetItem) return Swal.fire("Error", "Snapshot not found", "error");
+    if (!targetItem) return Swal.fire({ icon: "error", title: "Error", text: "Snapshot not found", background: "#1e293b", color: "#f8fafc" });
+
+    const prog = showProgressModal(`📥 Pulling ZIP #${id}...`, "#2563eb", "Fetching historical backup archive...");
 
     try {
-      showLoading("Pulling ZIP File Stream...");
-      const res = await API.get(`/archive/download-stream?fromDate=${targetItem.date_from}&toDate=${targetItem.date_to}`, { responseType: "blob" });
+      const res = await API.get(`/archive/download-stream?fromDate=${targetItem.date_from}&toDate=${targetItem.date_to}`, { 
+        responseType: "blob",
+        onDownloadProgress: (e) => {
+          if (e.total) {
+            const p = Math.round((e.loaded * 100) / e.total);
+            prog.updateProgress(p);
+          }
+        }
+      });
+
+      prog.finish();
+      await new Promise(r => setTimeout(r, 300));
+      Swal.close();
+
       const blob = new Blob([res.data], { type: "application/zip" });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -285,81 +541,139 @@ export default function ArchiveManager({ onNavigate }) {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-      Swal.close();
     } catch (err) {
+      prog.stop();
       Swal.close();
-      Swal.fire({ icon: "error", title: "Download Failed", text: err.message, width: 320 });
+      Swal.fire({ icon: "error", title: "Download Failed", text: err.message, width: 320, background: "#1e293b", color: "#f8fafc" });
     }
   };
 
   return (
     <div style={styles.container}>
-
-
+      {/* Header Bar */}
       <div style={styles.headerBar}>
-        <h2 style={{ margin: 0, fontSize: "24px", fontWeight: "900", letterSpacing: "1px" }}>🚀 ARCHIVE CONTROL CENTER</h2>
-        <button onClick={() => onNavigate("dashboard")} style={styles.btnBack}>← BACK TO MAIN</button>
+        <div>
+          <h2 style={{ margin: 0, fontSize: "20px", fontWeight: "700", letterSpacing: "0.5px", color: "#f8fafc" }}>
+            ARCHIVE CONTROL CENTER
+          </h2>
+          <small style={{ color: "#94a3b8", fontSize: "12px" }}>Manage system snapshots, backups, and live data archives</small>
+        </div>
+        <button onClick={() => onNavigate("dashboard")} style={styles.btnBack}>
+          ← Back to Main
+        </button>
       </div>
 
-            <div style={{ marginBottom: "20px" }}>
-        <ArchiveDashboard />
-      </div>
+      {/* Embedded Dashboard Component */}
+      <ArchiveDashboard />
 
+      {/* Controls / Inputs Section */}
       <div style={styles.cardMain}>
         <div style={styles.row}>
+          {/* START DATE */}
           <div style={{ flex: 1 }}>
-            <label style={styles.labelCyan}>⚡ START DATE</label>
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={styles.inputCyan} />
+            <label style={styles.inputLabel}>START DATE</label>
+            <input 
+              type="date" 
+              value={from} 
+              onChange={(e) => setFrom(e.target.value)} 
+              style={styles.inputField} 
+            />
+            {/* Date Preview Badge */}
+            <div style={styles.datePreviewBadge}>
+              {from ? formatCustomDate(from) : "DD/MMM/YYYY"}
+            </div>
           </div>
+
+          {/* END DATE */}
           <div style={{ flex: 1 }}>
-            <label style={styles.labelPink}>⚡ END DATE</label>
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} style={styles.inputPink} />
+            <label style={styles.inputLabel}>END DATE</label>
+            <input 
+              type="date" 
+              value={to} 
+              onChange={(e) => setTo(e.target.value)} 
+              style={styles.inputField} 
+            />
+            {/* Date Preview Badge */}
+            <div style={styles.datePreviewBadge}>
+              {to ? formatCustomDate(to) : "DD/MMM/YYYY"}
+            </div>
           </div>
         </div>
+
+        {/* Action Buttons Sequence */}
         <div style={styles.buttonRow}>
-          <button style={styles.btnBlue} onClick={handlePreview}>🔍 LOAD PREVIEW</button>
-          <button style={styles.btnPurple} onClick={handleBackup}>📦 COMPILE ZIP</button>
-          <button style={styles.btnGreen} onClick={handleSnapshot}>💾 SAVE SNAPSHOT</button>
-          <button style={styles.btnOrange} onClick={handleRestore}>📤 RESTORE ZIP</button>
-          <button style={styles.btnRed} onClick={handleDelete}>🔥 WIPE LIVE DATA</button>
+          <button style={styles.btnSecondary} onClick={handlePreview}>🔍 1st Step Preview</button>
+          <button style={styles.btnPrimary} onClick={handleSnapshot}>💾 2nd Snapshot</button>
+          <button style={styles.btnPrimary} onClick={handleBackup}>📦 3rd Download ZIP</button>
+          <button style={styles.btnDanger} onClick={handleDelete}>🔥 4th Delete Live Data</button>
+          <button style={styles.btnWarning} onClick={handleRestore}>📤 Restore ZIP</button>
         </div>
       </div>
 
-      {/* 📊 FIXED: Added complete visual layout for Customers and Suppliers under Preview */}
+      {/* Preview Section */}
       {preview && (
         <div style={styles.cardPreview}>
-          <h3 style={{ color: "#fff", textTransform: "uppercase", fontWeight: "900", marginBottom: "20px", borderBottom: "2px dashed #f1c40f", paddingBottom: "10px" }}>📊 Live System Data Preview</h3>
-          
-          <div style={{ display: "flex", gap: 15, marginBottom: 20 }}>
-            <div style={styles.blockCash}>
+          <div style={styles.previewHeader}>
+            <h3 style={{ color: "#f8fafc", fontSize: "16px", fontWeight: "700", margin: 0 }}>
+              📊 LIVE SYSTEM DATA PREVIEW
+            </h3>
+            <span style={{ fontSize: "12px", color: "#94a3b8" }}>
+              Range: {formatCustomDate(from)} to {formatCustomDate(to)}
+            </span>
+          </div>
+
+          {/* Key Metrics */}
+          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "20px" }}>
+            <div style={styles.summaryBlock}>
               <span style={styles.blockLabel}>Opening Cash</span>
-              <h2 style={styles.blockValue}>{Number(preview.opening_cash || 0).toLocaleString()}</h2>
+              <h3 style={styles.blockValue}>PKR {Number(preview.opening_cash || 0).toLocaleString()}</h3>
             </div>
-            <div style={styles.blockBank}>
-              <span style={styles.blockLabel}>Opening Bank</span>
-              <h2 style={styles.blockValue}>{Number(preview.opening_bank || 0).toLocaleString()}</h2>
+            <div style={styles.summaryBlock}>
+              <span style={styles.blockLabel}>Opening Bank (Total)</span>
+              <h3 style={styles.blockValue}>PKR {Number(preview.opening_bank || 0).toLocaleString()}</h3>
             </div>
-            <div style={styles.blockProfit}>
+            <div style={styles.summaryBlock}>
               <span style={styles.blockLabel}>Opening Profit</span>
-              <h2 style={styles.blockValue}>{Number(preview.opening_profit || 0).toLocaleString()}</h2>
+              <h3 style={styles.blockValue}>PKR {Number(preview.opening_profit || 0).toLocaleString()}</h3>
             </div>
           </div>
 
+          {/* 🏦 INDIVIDUAL BANK ACCOUNTS BREAKDOWN */}
+          {preview.bank_balances && preview.bank_balances.length > 0 && (
+            <div style={{ marginBottom: "20px" }}>
+              <h4 style={{ color: "#38bdf8", fontSize: "13px", fontWeight: "700", marginBottom: "10px" }}>
+                🏦 INDIVIDUAL BANK ACCOUNTS BREAKDOWN
+              </h4>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" }}>
+                {preview.bank_balances.map((b) => (
+                  <div key={b.id} style={{ background: "#0f172a", padding: "10px 14px", borderRadius: "8px", border: "1px solid #334155" }}>
+                    <div style={{ fontSize: "12px", color: "#f8fafc", fontWeight: "700" }}>{b.bank_name}</div>
+                    <div style={{ fontSize: "11px", color: "#94a3b8" }}>{b.account_title} ({b.account_number || "N/A"})</div>
+                    <div style={{ fontSize: "14px", color: "#38bdf8", fontWeight: "700", marginTop: "4px" }}>
+                      PKR {Number(b.balance || 0).toLocaleString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* CUSTOMERS & SUPPLIERS GRID */}
           <div style={styles.tableGrid}>
             {/* CUSTOMERS PANEL */}
             <div style={styles.panelBox}>
-              <div style={styles.panelHeaderCyan}>
-                <span>👤 CUSTOMERS ({preview.customer_count || preview.customerCount || 0})</span>
+              <div style={styles.panelHeader}>
+                <span>👥 CUSTOMERS ({preview.customer_count || preview.customerCount || 0})</span>
               </div>
               <div style={styles.panelBody}>
                 {preview.customers && preview.customers.length > 0 ? (
                   preview.customers.map((c, i) => (
                     <div key={i} style={styles.listItemSub}>
                       <div>
-                        <b style={{ color: "#06b6d4" }}>{c.ref_no || "N/A"}</b> — {c.customer_name}<br />
-                        <span style={{ fontSize: "12px", color: "#aaa" }}>Status: {c.payment_status || 'Pending'}</span>
+                        <b style={{ color: "#f8fafc", fontSize: "13px" }}>{c.customer_name}</b>
+                        <div style={{ fontSize: "11px", color: "#64748b" }}>Code: {c.customer_code || 'N/A'}</div>
                       </div>
-                      <b style={{ color: "#fff" }}>{Number(c.balance || 0).toLocaleString()}</b>
+                      <b style={{ color: "#f8fafc", fontSize: "13px" }}>{Number(c.balance || 0).toLocaleString()}</b>
                     </div>
                   ))
                 ) : (
@@ -370,7 +684,7 @@ export default function ArchiveManager({ onNavigate }) {
 
             {/* SUPPLIERS PANEL */}
             <div style={styles.panelBox}>
-              <div style={styles.panelHeaderPink}>
+              <div style={styles.panelHeader}>
                 <span>🏢 SUPPLIERS ({preview.supplier_count || preview.supplierCount || 0})</span>
               </div>
               <div style={styles.panelBody}>
@@ -378,10 +692,10 @@ export default function ArchiveManager({ onNavigate }) {
                   preview.suppliers.map((s, i) => (
                     <div key={i} style={styles.listItemSub}>
                       <div>
-                        <b style={{ color: "#f43f5e" }}>{s.supplier_name}</b><br />
-                        <span style={{ fontSize: "12px", color: "#aaa" }}>Code: {s.supplier_code || 'N/A'}</span>
+                        <b style={{ color: "#f8fafc", fontSize: "13px" }}>{s.supplier_name}</b>
+                        <div style={{ fontSize: "11px", color: "#64748b" }}>Code: {s.supplier_code || 'N/A'}</div>
                       </div>
-                      <b style={{ color: "#fff" }}>{Number(s.balance || 0).toLocaleString()}</b>
+                      <b style={{ color: "#f8fafc", fontSize: "13px" }}>{Number(s.balance || 0).toLocaleString()}</b>
                     </div>
                   ))
                 ) : (
@@ -390,66 +704,309 @@ export default function ArchiveManager({ onNavigate }) {
               </div>
             </div>
           </div>
-
         </div>
       )}
 
+      {/* Historical Snapshots Logs */}
       <div style={styles.cardLogs}>
-        <h3 style={{ color: "#fff", letterSpacing: "1px", margin: "0 0 15px 0", fontWeight: "900" }}>📜 HISTORICAL SNAPSHOTS ENGINE</h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+        <h3 style={{ color: "#f8fafc", margin: "0 0 16px 0", fontWeight: "700", fontSize: "16px" }}>
+          📜 HISTORICAL SNAPSHOTS ENGINE
+        </h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
           {(list || []).map((item) => (
             <div key={item.id} style={styles.listItemLog}>
               <div>
-                <span style={styles.badgeId}>BLOCK ID: #{item.id}</span>
-                <div style={{ marginTop: "5px", fontSize: "14px", fontWeight: "bold" }}>Timeline: <span style={{ color: "#00f2fe" }}>{item.date_from}</span> to <span style={{ color: "#ff758c" }}>{item.date_to}</span></div>
+                <span style={styles.badgeId}>ID: #{item.id}</span>
+                <div style={{ marginTop: "6px", fontSize: "13px", color: "#cbd5e1" }}>
+                  Timeline: <span style={{ color: "#38bdf8", fontWeight: "600" }}>{formatCustomDate(item.date_from)}</span> to <span style={{ color: "#38bdf8", fontWeight: "600" }}>{formatCustomDate(item.date_to)}</span>
+                </div>
               </div>
               <div style={{ display: "flex", gap: "8px" }}>
-                <button style={styles.smallBtnInspect} onClick={() => handleView(item.id)}>INSPECT</button>
-                <button style={styles.smallBtnPull} onClick={() => handleDownload(item.id)}>PULL ZIP</button>
+                <button style={styles.smallBtnSecondary} onClick={() => handleView(item.id)}>Inspect</button>
+                <button style={styles.smallBtnPrimary} onClick={() => handleDownload(item.id)}>Pull ZIP</button>
               </div>
             </div>
           ))}
+          {(!list || list.length === 0) && (
+            <div style={{ textAlign: "center", padding: "20px", color: "#64748b", fontSize: "13px" }}>
+              No snapshot history available
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
+/* ================= SOBER & CLEAN STYLES ================= */
 const styles = {
-  container: { padding: "25px", background: "linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)", minHeight: "100vh", color: "#fff" },
-  headerBar: { display: "flex", justifyContent: "space-between", alignItems: "center", background: "linear-gradient(90deg, #ec4899 0%, #8b5cf6 50%, #6366f1 100%)", padding: "20px", borderRadius: "20px", marginBottom: "25px" },
-  btnBack: { background: "#f59e0b", color: "#000", border: "none", padding: "10px 20px", borderRadius: "12px", cursor: "pointer", fontWeight: "900" },
-  cardMain: { background: "#1e293b", padding: "25px", borderRadius: "24px", marginBottom: "25px" },
-  row: { display: "flex", gap: "20px" },
-  labelCyan: { display: "block", fontSize: "12px", fontWeight: "900", color: "#06b6d4" },
-  labelPink: { display: "block", fontSize: "12px", fontWeight: "900", color: "#f43f5e" },
-  inputCyan: { width: "100%", padding: "12px", background: "#0f172a", border: "2px solid #06b6d4", borderRadius: "14px", color: "#06b6d4" },
-  inputPink: { width: "100%", padding: "12px", background: "#0f172a", border: "2px solid #f43f5e", borderRadius: "14px", color: "#f43f5e" },
-  buttonRow: { marginTop: "20px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" },
-  btnBlue: { padding: "15px", background: "#0284c7", color: "#fff", border: "none", borderRadius: "14px", fontWeight: "900" },
-  btnPurple: { padding: "15px", background: "#9333ea", color: "#fff", border: "none", borderRadius: "14px", fontWeight: "900" },
-  btnGreen: { padding: "15px", background: "#16a34a", color: "#000", border: "none", borderRadius: "14px", fontWeight: "900" },
-  btnRed: { padding: "15px", background: "#dc2626", color: "#fff", border: "none", borderRadius: "14px", fontWeight: "900" },
-  btnOrange: { padding: "15px", background: "#ea580c", color: "#fff", border: "none", borderRadius: "14px", fontWeight: "900" },
-  cardPreview: { background: "#0f172a", padding: "25px", borderRadius: "24px" },
-  blockCash: { background: "#059669", padding: "15px", borderRadius: "16px", flex: 1 },
-  blockBank: { background: "#2563eb", padding: "15px", borderRadius: "16px", flex: 1 },
-  blockProfit: { background: "#7e3af2", padding: "15px", borderRadius: "16px", flex: 1 },
-  blockLabel: { display: "block", fontSize: "11px", color: "#fff" },
-  blockValue: { margin: "5px 0 0 0", fontSize: "24px", fontWeight: "900" },
-  
-  // New Layout Style Engine
-  tableGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px", marginTop: "20px" },
-  panelBox: { background: "#1e293b", borderRadius: "16px", overflow: "hidden", border: "1px solid #334155" },
-  panelHeaderCyan: { background: "linear-gradient(90deg, #06b6d4, #0284c7)", padding: "12px 15px", fontWeight: "900", fontSize: "14px" },
-  panelHeaderPink: { background: "linear-gradient(90deg, #f43f5e, #be123c)", padding: "12px 15px", fontWeight: "900", fontSize: "14px" },
-  panelBody: { maxHeight: "200px", overflowY: "auto", padding: "5px" },
-  listItemSub: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 15px", borderBottom: "1px solid #334155" },
-  emptyText: { padding: "20px", color: "#64748b", textAlign: "center", fontSize: "13px" },
-
-  cardLogs: { background: "#1e293b", padding: "25px", borderRadius: "24px" },
-  listItemLog: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "15px", background: "#0f172a", borderRadius: "16px" },
-  badgeId: { background: "#4f46e5", padding: "4px 8px", borderRadius: "6px", fontSize: "11px" },
-  smallBtnInspect: { padding: "8px 15px", background: "#a21caf", color: "#fff", border: "none", borderRadius: "10px" },
-  smallBtnPull: { padding: "8px 15px", background: "#d97706", color: "#000", border: "none", borderRadius: "10px" }
+  container: {
+    padding: "24px",
+    background: "#0f172a",
+    minHeight: "100vh",
+    color: "#f8fafc",
+    fontFamily: "'Inter', system-ui, -apple-system, sans-serif"
+  },
+  headerBar: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    background: "#1e293b",
+    padding: "16px 20px",
+    borderRadius: "12px",
+    border: "1px solid #334155",
+    marginBottom: "20px"
+  },
+  btnBack: {
+    background: "#334155",
+    color: "#f8fafc",
+    border: "none",
+    padding: "8px 16px",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontWeight: "600",
+    fontSize: "13px"
+  },
+  dashboardCard: {
+    background: "#1e293b",
+    borderRadius: "12px",
+    padding: "20px",
+    border: "1px solid #334155",
+    borderLeft: "4px solid #38bdf8",
+    marginBottom: "20px"
+  },
+  dashboardTitle: {
+    fontSize: "11px",
+    fontWeight: "700",
+    color: "#38bdf8",
+    letterSpacing: "0.5px",
+    textTransform: "uppercase"
+  },
+  dateBadge: {
+    background: "#0f172a",
+    color: "#f8fafc",
+    padding: "4px 12px",
+    borderRadius: "6px",
+    border: "1px solid #334155",
+    fontWeight: "600",
+    fontSize: "14px"
+  },
+  tableChip: {
+    fontSize: "10px",
+    padding: "3px 8px",
+    backgroundColor: "#0f172a",
+    color: "#94a3b8",
+    borderRadius: "4px",
+    border: "1px solid #334155"
+  },
+  tipBox: {
+    flex: "0 0 300px",
+    background: "#0f172a",
+    padding: "12px 14px",
+    borderRadius: "8px",
+    border: "1px solid #334155",
+    fontSize: "12px",
+    color: "#94a3b8",
+    lineHeight: "1.4"
+  },
+  cardMain: {
+    background: "#1e293b",
+    padding: "20px",
+    borderRadius: "12px",
+    border: "1px solid #334155",
+    marginBottom: "20px"
+  },
+  row: {
+    display: "flex",
+    gap: "16px",
+    flexWrap: "wrap"
+  },
+  inputLabel: {
+    display: "block",
+    fontSize: "11px",
+    fontWeight: "700",
+    color: "#94a3b8",
+    marginBottom: "6px",
+    letterSpacing: "0.5px"
+  },
+  inputField: {
+    width: "100%",
+    padding: "10px 12px",
+    background: "#0f172a",
+    border: "1px solid #334155",
+    borderRadius: "8px",
+    color: "#f8fafc",
+    outline: "none",
+    fontSize: "13px"
+  },
+  buttonRow: {
+    marginTop: "16px",
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+    gap: "10px"
+  },
+  btnPrimary: {
+    padding: "10px 14px",
+    background: "#2563eb",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    fontWeight: "600",
+    fontSize: "13px",
+    cursor: "pointer"
+  },
+  btnSecondary: {
+    padding: "10px 14px",
+    background: "#334155",
+    color: "#f8fafc",
+    border: "none",
+    borderRadius: "8px",
+    fontWeight: "600",
+    fontSize: "13px",
+    cursor: "pointer"
+  },
+  btnDanger: {
+    padding: "10px 14px",
+    background: "#991b1b",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    fontWeight: "600",
+    fontSize: "13px",
+    cursor: "pointer"
+  },
+  btnWarning: {
+    padding: "10px 14px",
+    background: "#d97706",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    fontWeight: "600",
+    fontSize: "13px",
+    cursor: "pointer"
+  },
+  cardPreview: {
+    background: "#1e293b",
+    padding: "20px",
+    borderRadius: "12px",
+    border: "1px solid #334155",
+    marginBottom: "20px"
+  },
+  previewHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderBottom: "1px solid #334155",
+    paddingBottom: "10px",
+    marginBottom: "16px"
+  },
+  summaryBlock: {
+    background: "#0f172a",
+    padding: "12px 16px",
+    borderRadius: "8px",
+    border: "1px solid #334155",
+    flex: 1,
+    minWidth: "180px"
+  },
+  blockLabel: {
+    display: "block",
+    fontSize: "11px",
+    color: "#94a3b8",
+    fontWeight: "600"
+  },
+  blockValue: {
+    margin: "4px 0 0 0",
+    fontSize: "18px",
+    fontWeight: "700",
+    color: "#f8fafc"
+  },
+  tableGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+    gap: "16px"
+  },
+  panelBox: {
+    background: "#0f172a",
+    borderRadius: "8px",
+    border: "1px solid #334155",
+    overflow: "hidden"
+  },
+  panelHeader: {
+    background: "#334155",
+    padding: "10px 14px",
+    fontWeight: "700",
+    fontSize: "12px",
+    color: "#f8fafc"
+  },
+  panelBody: {
+    maxHeight: "220px",
+    overflowY: "auto"
+  },
+listItemSub: {
+  display: "flex",
+  justifyContent: "space-between", // Fixed
+  alignItems: "center",
+  padding: "8px 12px",
+  borderBottom: "1px solid #1e293b"
+},
+  emptyText: {
+    padding: "20px",
+    color: "#64748b",
+    textAlign: "center",
+    fontSize: "12px"
+  },
+  cardLogs: {
+    background: "#1e293b",
+    padding: "20px",
+    borderRadius: "12px",
+    border: "1px solid #334155"
+  },
+  listItemLog: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "12px 16px",
+    background: "#0f172a",
+    borderRadius: "8px",
+    border: "1px solid #334155"
+  },
+  badgeId: {
+    background: "#334155",
+    color: "#f8fafc",
+    padding: "2px 6px",
+    borderRadius: "4px",
+    fontSize: "11px",
+    fontWeight: "600"
+  },
+  smallBtnSecondary: {
+    padding: "6px 12px",
+    background: "#334155",
+    color: "#f8fafc",
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontSize: "12px",
+    fontWeight: "600"
+  },
+  datePreviewBadge: {
+    marginTop: "6px",
+    padding: "4px 8px",
+    background: "#1e3a8a",
+    color: "#93c5fd",
+    borderRadius: "4px",
+    fontSize: "12px",
+    fontWeight: "700",
+    display: "inline-block",
+    border: "1px solid #1e40af"
+  },
+  smallBtnPrimary: {
+    padding: "6px 12px",
+    background: "#2563eb",
+    color: "#fff",
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontSize: "12px",
+    fontWeight: "600"
+  }
 };
