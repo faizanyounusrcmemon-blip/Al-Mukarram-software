@@ -529,9 +529,173 @@ const loadPendingAlways = async () => {
     }
   };
 
-  /* EXPORT PDF & EXCEL functions stay same... */
-  const exportPDF = async () => { /* ... */ };
-  const exportExcel = () => { /* ... */ };
+/* ====================================================
+   EXPORT PDF FUNCTION (DYNAMIC PAGE NUMBERS)
+==================================================== */
+const exportPDF = async () => {
+  if (!ledgerView || ledgerView.length === 0) {
+    return Swal.fire({ icon: "warning", text: "No ledger data to export!" });
+  }
+
+  Swal.fire({
+    width: "260px",
+    title: "Generating PDF...",
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading()
+  });
+
+  try {
+    const doc = new jsPDF("p", "mm", "a4");
+    const supplierName = pending?.find(p => p.supplier_code === supplierCode)?.supplier_name || "N/A";
+    const printDate = formatDate(today);
+
+    // 1. Header Banner & Info Box Function
+    const renderPageHeader = () => {
+      // Blue Header Banner
+      doc.setFillColor(13, 71, 161);
+      doc.rect(0, 0, 210, 28, "F");
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text("AL MUKARRAM TRAVEL & TOURS", 105, 12, { align: "center" });
+
+      // Supplier Info Box (Gray Background)
+      doc.setFillColor(245, 247, 250);
+      doc.rect(10, 32, 190, 22, "F");
+
+      doc.setTextColor(40, 40, 40);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.text(`SUPPLIER NAME: ${supplierName.toUpperCase()}`, 14, 40);
+      doc.text(`SUPPLIER CODE: ${supplierCode || "-"}`, 14, 48);
+
+      doc.setFont("helvetica", "normal");
+      doc.text(`Statement Period: ${fromDate && toDate ? `${formatDate(fromDate)} to ${formatDate(toDate)}` : "All Records"}`, 130, 40);
+      doc.text(`Printed On: ${printDate}`, 130, 48);
+    };
+
+    // 2. Table Header Function
+    const renderTableHeader = (startY) => {
+      doc.setFillColor(33, 37, 41);
+      doc.rect(10, startY, 190, 8, "F");
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+
+      doc.text("Date", 14, startY + 5.5);
+      doc.text("Description", 45, startY + 5.5);
+      doc.text("Debit (-)", 135, startY + 5.5, { align: "right" });
+      doc.text("Credit (+)", 165, startY + 5.5, { align: "right" });
+      doc.text("Balance", 195, startY + 5.5, { align: "right" });
+    };
+
+    renderPageHeader();
+    let y = 60;
+    renderTableHeader(y);
+    y += 8;
+
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(30, 30, 30);
+
+    // 3. Render Table Rows
+    ledgerView.forEach((row) => {
+      // Check page break height
+      if (y > 270) {
+        doc.addPage();
+        renderPageHeader();
+        y = 60;
+        renderTableHeader(y);
+        y += 8;
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(30, 30, 30);
+      }
+
+      const itemDetail = row.type === "purchase" ? (row.detail || "Purchase Entry") : (row.description || row.type);
+
+      doc.text(formatDate(row.date), 14, y + 5);
+      doc.text(String(itemDetail).substring(0, 45), 45, y + 5);
+      doc.text(row.debit ? fmtAmt(row.debit) : "-", 135, y + 5, { align: "right" });
+      doc.text(row.credit ? fmtAmt(row.credit) : "-", 165, y + 5, { align: "right" });
+      doc.setFont("helvetica", "bold");
+      doc.text(fmtAmt(row.balance), 195, y + 5, { align: "right" });
+      doc.setFont("helvetica", "normal");
+
+      doc.setDrawColor(230, 230, 230);
+      doc.line(10, y + 7, 200, y + 7);
+
+      y += 8;
+    });
+
+    // 4. DYNAMIC PAGE NUMBERING (Loop through total generated pages)
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      
+      // Page number dynamically written based on total pages
+      doc.text(`SUPPLIER LEDGER STATEMENT — Page ${i} of ${totalPages}`, 105, 20, { align: "center" });
+    }
+
+    // Save File
+    doc.save(`Ledger-${supplierCode || "SUPPLIER"}-${supplierName.replace(/\s+/g, '_')}.pdf`);
+    Swal.close();
+  } catch (err) {
+    console.error("PDF Export Error:", err);
+    Swal.close();
+    Swal.fire({ icon: "error", text: "Failed to generate PDF" });
+  }
+};
+
+/* ====================================================
+   EXPORT EXCEL FUNCTION (WITH HEADER TITLE & INFO)
+==================================================== */
+const exportExcel = () => {
+  if (!ledgerView || ledgerView.length === 0) {
+    return Swal.fire({ icon: "warning", text: "No ledger data to export!" });
+  }
+
+  try {
+    const supplierName = pending?.find(p => p.supplier_code === supplierCode)?.supplier_name || "N/A";
+
+    // Build custom rows for Excel including Title Header
+    const excelRows = [
+      ["AL MUKARRAM TRAVEL & TOURS"],
+      ["SUPPLIER LEDGER STATEMENT"],
+      [],
+      [`SUPPLIER NAME: ${supplierName}`, "", `Printed On: ${formatDate(today)}`],
+      [`SUPPLIER CODE: ${supplierCode || "-"}`, "", `Statement Period: ${fromDate && toDate ? `${formatDate(fromDate)} to ${formatDate(toDate)}` : "All Records"}`],
+      [],
+      ["Date", "Type", "Ref No", "Description", "Payment Method", "Debit (-)", "Credit (+)", "Balance"]
+    ];
+
+    // Append Table Rows
+    ledgerView.forEach((r) => {
+      excelRows.push([
+        formatDate(r.date),
+        r.type || "-",
+        r.ref_no || "-",
+        r.detail || r.description || "-",
+        r.payment_method || "-",
+        r.debit || 0,
+        r.credit || 0,
+        r.balance || 0
+      ]);
+    });
+
+    const worksheet = XLSX.utils.aoa_to_sheet(excelRows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Supplier Ledger");
+
+    XLSX.writeFile(workbook, `Ledger_${supplierCode || "SUPPLIER"}.xlsx`);
+  } catch (err) {
+    console.error("Excel Export Error:", err);
+    Swal.fire({ icon: "error", text: "Failed to export Excel file" });
+  }
+};
 
   return (
     <div className="container-fluid p-3">
