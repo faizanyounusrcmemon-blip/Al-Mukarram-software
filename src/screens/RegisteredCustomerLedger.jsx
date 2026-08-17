@@ -674,7 +674,7 @@ const fetchSaleDetail = async (id, description) => {
           pdf.setTextColor(255, 255, 255);
           pdf.setFont("helvetica", "bold");
           pdf.setFontSize(16);
-          pdf.text("BE TRAVEL & TOURS", pageWidth / 2, 12, { align: "center" });
+          pdf.text("AL MUKARRAM TRAVEL & TOURS", pageWidth / 2, 12, { align: "center" });
 
           pdf.setFont("helvetica", "normal");
           pdf.setFontSize(9);
@@ -767,7 +767,7 @@ const fetchSaleDetail = async (id, description) => {
     setTimeout(() => {
       try {
         const headerInfo = [
-          ["BE TRAVEL & TOURS"],
+          ["AL MUKARRAM TRAVEL & TOURS"],
           ["REGISTERED CUSTOMER FINANCIAL LEDGER"],
           [""],
           ["Customer Name:", customerName.toUpperCase(), "", "Printed Date:", getRowDate({ date: new Date() })],
