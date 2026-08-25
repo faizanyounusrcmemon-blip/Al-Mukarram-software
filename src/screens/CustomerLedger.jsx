@@ -58,7 +58,6 @@ const numberToWords = (num) => {
 const today = new Date().toISOString().split("T")[0];
 
 export default function CustomerLedger({ onNavigate }) {
-  // Hook initialization
   const exportUtils = useLedgerExport();
   const handleExportPDF = exportUtils?.handleExportPDF || exportUtils?.exportPDF;
   const handleExportExcel = exportUtils?.handleExportExcel || exportUtils?.exportExcel;
@@ -157,6 +156,12 @@ export default function CustomerLedger({ onNavigate }) {
         customerName = customerRow.description;
       }
 
+      // Dynamic color for status in SweetAlert
+      const statusColor = 
+        currentStatus === "PENDING" ? "#dc3545" : 
+        currentStatus === "PARTIAL" ? "#fd7e14" : 
+        currentStatus === "EXTRA PAID" ? "#0dcaf0" : "#198754";
+
       Swal.close();
       Swal.fire({
         width: "360px",
@@ -172,13 +177,7 @@ export default function CustomerLedger({ onNavigate }) {
               <span style="color:#198754">${customerName}</span>
               <hr style="margin:8px 0"/>
               <b>Payment Status:</b><br/>
-              <span style="color:${
-                currentStatus === "PENDING"
-                  ? "#dc3545"
-                  : currentStatus === "PARTIAL"
-                  ? "#fd7e14"
-                  : "#198754"
-              }; font-weight:bold;">
+              <span style="color:${statusColor}; font-weight:bold;">
                 ${currentStatus}
               </span>
             </div>
@@ -520,7 +519,7 @@ export default function CustomerLedger({ onNavigate }) {
     }
   };
 
-/* =========================
+  /* =========================
      EXPORT FUNCTIONS (PDF & EXCEL)
   ========================== */
   const exportPDF = () => {
@@ -584,6 +583,7 @@ export default function CustomerLedger({ onNavigate }) {
             📘 CUSTOMER LEDGER {refNo && `— ${refNo}`}
             {paymentStatus === "PENDING" && <span className="badge bg-danger ms-2">PENDING</span>}
             {paymentStatus === "PARTIAL" && <span className="badge bg-warning text-dark ms-2">PARTIAL</span>}
+            {paymentStatus === "EXTRA PAID" && <span className="badge bg-info text-dark ms-2">EXTRA PAID</span>}
             {paymentStatus === "CLEARED" && refNo && <span className="badge bg-success ms-2">CLEARED</span>}
           </h4>
           <button className="btn btn-light btn-sm fw-bold" onClick={() => onNavigate("dashboard")}>⬅ Back to Home</button>
@@ -591,42 +591,49 @@ export default function CustomerLedger({ onNavigate }) {
       </div>
 
       <div className="row">
-        {/* SIDEBAR: PENDING / PARTIAL LIST */}
+        {/* SIDEBAR: PENDING / PARTIAL / EXTRA PAID LIST */}
         <div className="col-lg-3 col-md-4 mb-4">
           <div className="card shadow-sm h-100">
-            <div className="card-header bg-danger text-white fw-bold d-flex align-items-center">
-              <span>⏳ Pending / Partial Ledgers</span>
+            <div className="card-header bg-dark text-white fw-bold d-flex align-items-center">
+              <span>⏳ Unsettled Ledgers</span>
             </div>
             <div className="card-body p-2" style={{ maxHeight: "70vh", overflowY: "auto" }}>
               {pending.length === 0 ? (
                 <div className="p-3 text-center text-success">
                   <h5>✅ All Cleared!</h5>
-                  <p className="small mb-0 text-muted">No pending/partial manual ledgers found.</p>
+                  <p className="small mb-0 text-muted">No pending, partial, or extra paid ledgers found.</p>
                 </div>
               ) : (
                 <div className="list-group list-group-flush">
-                  {pending.map((p, i) => (
-                    <div
-                      key={i}
-                      onClick={() => loadLedger(p.ref_no)}
-                      className="list-group-item list-group-item-action p-3 mb-2 rounded border-start border-4 cursor-pointer"
-                      style={{
-                        cursor: "pointer",
-                        borderStartColor: p.payment_status === "PENDING" ? "#dc3545" : "#ffc107",
-                        backgroundColor: p.ref_no === refNo ? "#e9ecef" : "#f8f9fa"
-                      }}
-                    >
-                      <div className="d-flex justify-content-between align-items-start mb-1">
-                        <span className="badge bg-dark font-monospace">{p.ref_no}</span>
-                        <span className={`badge ${p.payment_status === "PENDING" ? "bg-danger" : "bg-warning text-dark"}`}>
-                          {p.payment_status}
-                        </span>
+                  {pending.map((p, i) => {
+                    const isPending = p.payment_status === "PENDING";
+                    const isPartial = p.payment_status === "PARTIAL";
+                    const borderClr = isPending ? "#dc3545" : isPartial ? "#ffc107" : "#0dcaf0";
+                    const badgeBg = isPending ? "bg-danger" : isPartial ? "bg-warning text-dark" : "bg-info text-dark";
+
+                    return (
+                      <div
+                        key={i}
+                        onClick={() => loadLedger(p.ref_no)}
+                        className="list-group-item list-group-item-action p-3 mb-2 rounded border-start border-4 cursor-pointer"
+                        style={{
+                          cursor: "pointer",
+                          borderStartColor: borderClr,
+                          backgroundColor: p.ref_no === refNo ? "#e9ecef" : "#f8f9fa"
+                        }}
+                      >
+                        <div className="d-flex justify-content-between align-items-start mb-1">
+                          <span className="badge bg-dark font-monospace">{p.ref_no}</span>
+                          <span className={`badge ${badgeBg}`}>
+                            {p.payment_status}
+                          </span>
+                        </div>
+                        <div className="fw-bold text-truncate text-primary" style={{ fontSize: "0.95rem" }}>
+                          {p.customer_name || "-"}
+                        </div>
                       </div>
-                      <div className="fw-bold text-truncate text-primary" style={{ fontSize: "0.95rem" }}>
-                        {p.customer_name || "-"}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -745,21 +752,21 @@ export default function CustomerLedger({ onNavigate }) {
           <div ref={pdfRef} className="card shadow-sm overflow-hidden">
             <div className="table-responsive">
               <table className="table table-striped table-hover table-bordered mb-0 align-middle">
-<thead className="table-dark">
-  <tr>
-    <th style={{ width: "12%" }}>Date</th>
-    <th style={{ width: "35%" }}>Description</th>
-    <th style={{ width: "15%" }}>Method</th> {/* 👈 Naya Column Header */}
-    <th style={{ width: "11%" }} className="text-end">Debit (-)</th>
-    <th style={{ width: "11%" }} className="text-end">Credit (+)</th>
-    <th style={{ width: "11%" }} className="text-end">Balance</th>
-    <th style={{ width: "5%" }} className="text-center">Action</th>
-  </tr>
+                <thead className="table-dark">
+                  <tr>
+                    <th style={{ width: "12%" }}>Date</th>
+                    <th style={{ width: "35%" }}>Description</th>
+                    <th style={{ width: "15%" }}>Method</th>
+                    <th style={{ width: "11%" }} className="text-end">Debit (-)</th>
+                    <th style={{ width: "11%" }} className="text-end">Credit (+)</th>
+                    <th style={{ width: "11%" }} className="text-end">Balance</th>
+                    <th style={{ width: "5%" }} className="text-center">Action</th>
+                  </tr>
                 </thead>
                 <tbody>
                   {rows.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="text-center p-4 text-muted fs-5">
+                      <td colSpan="7" className="text-center p-4 text-muted fs-5">
                         No ledger entries loaded. Enter a valid Ref No above and click "Load".
                       </td>
                     </tr>
@@ -767,26 +774,20 @@ export default function CustomerLedger({ onNavigate }) {
                     rows.map((r, i) => (
                       <tr key={r.id || i}>
                         <td>{getRowDate(r)}</td>
-{/* Description Cell */}
-<td className={r.id === "CUSTOMER" ? "fw-bold text-primary" : ""}>
-  {r.description}
-</td>
-
-{/* 👈 NAYA PAYMENT METHOD CELL */}
-<td>
-  {r.payment_method?.toLowerCase() === "bank" ? (
-    <span className="badge bg-primary">
-      🏦 {r.bank_name || "Bank"}
-    </span>
-  ) : r.payment_method?.toLowerCase() === "cash" ? (
-    <span className="badge bg-success">💵 Cash</span>
-  ) : (
-    <span className="text-muted">-</span>
-  )}
-</td>
-
-{/* Debit Cell */}
-
+                        <td className={r.id === "CUSTOMER" ? "fw-bold text-primary" : ""}>
+                          {r.description}
+                        </td>
+                        <td>
+                          {r.payment_method?.toLowerCase() === "bank" ? (
+                            <span className="badge bg-primary">
+                              🏦 {r.bank_name || "Bank"}
+                            </span>
+                          ) : r.payment_method?.toLowerCase() === "cash" ? (
+                            <span className="badge bg-success">💵 Cash</span>
+                          ) : (
+                            <span className="text-muted">-</span>
+                          )}
+                        </td>
                         <td className="text-end text-danger fw-bold">{r.debit > 0 ? fmtAmt(r.debit) : "-"}</td>
                         <td className="text-end text-success fw-bold">{r.credit > 0 ? fmtAmt(r.credit) : "-"}</td>
                         <td className="text-end fw-bold" style={{ backgroundColor: "#f8f9fa" }}>
