@@ -17,23 +17,23 @@ const styles = {
     minHeight: "100vh",
     padding: "30px",
     background:
-      "linear-gradient(135deg,#ecfdf5 0%,#f0fdfa 45%,#ffffff 100%)",
+      "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #f0fdfa 100%)",
     fontFamily: "'Cairo', sans-serif",
   },
   group: {
     maxWidth: 1180,
     margin: "0 auto",
-    background: "#fff",
+    background: "#ffffff",
     borderRadius: "24px",
     padding: "35px",
-    border: "1px solid rgba(16,185,129,.15)",
+    border: "1px solid #e2e8f0",
     boxShadow:
-      "0 18px 45px rgba(0,0,0,.08)",
+      "0 20px 40px rgba(148, 163, 184, 0.12)",
   },
   sectionHeader: {
     background:
-      "linear-gradient(90deg,#065f46,#059669,#10b981)",
-    color: "#fff",
+      "linear-gradient(90deg, #818cf8, #a78bfa, #c084fc)",
+    color: "#ffffff",
     padding: "12px 18px",
     borderRadius: "12px",
     marginTop: "28px",
@@ -43,7 +43,7 @@ const styles = {
     letterSpacing: "1px",
     textTransform: "uppercase",
     boxShadow:
-      "0 8px 20px rgba(16,185,129,.30)",
+      "0 8px 20px rgba(167, 139, 250, 0.25)",
   },
   table: {
     width: "100%",
@@ -51,15 +51,15 @@ const styles = {
     borderSpacing: "0",
     overflow: "hidden",
     borderRadius: "16px",
-    background: "#fff",
-    border: "1px solid #d1fae5",
+    background: "#ffffff",
+    border: "1px solid #f1f5f9",
     boxShadow:
-      "0 8px 24px rgba(0,0,0,.06)",
+      "0 6px 20px rgba(0, 0, 0, 0.03)",
   },
   th: {
     background:
-      "linear-gradient(90deg,#065f46,#059669)",
-    color: "#fff",
+      "linear-gradient(90deg, #6366f1, #8b5cf6)",
+    color: "#ffffff",
     padding: "13px",
     textAlign: "center",
     fontWeight: "700",
@@ -67,37 +67,27 @@ const styles = {
   },
   td: {
     padding: "12px",
-    borderBottom: "1px solid #ecfdf5",
-    background: "#fff",
+    borderBottom: "1px solid #f8fafc",
+    background: "#ffffff",
+    color: "#334155",
     transition: ".3s",
   },
-  button: {
-    borderRadius: "50px",
-    padding: "10px 22px",
-    fontWeight: "700",
-    border: "none",
-    color: "#fff",
-    cursor: "pointer",
-    background:
-      "linear-gradient(135deg,#059669,#10b981)",
-    boxShadow:
-      "0 8px 18px rgba(16,185,129,.35)",
-    transition: ".3s",
-  },
+
   input: {
     borderRadius: "12px",
-    border: "1px solid #bbf7d0",
+    border: "1px solid #e2e8f0",
     padding: "10px 12px",
-    background: "#fff",
+    background: "#f8fafc",
+    color: "#334155",
   },
   summaryCard: {
     background:
-      "linear-gradient(135deg,#065f46,#10b981)",
-    color: "#fff",
+      "linear-gradient(135deg, #a78bfa, #f472b6)",
+    color: "#ffffff",
     borderRadius: "18px",
     padding: "20px",
     boxShadow:
-      "0 10px 25px rgba(16,185,129,.30)",
+      "0 10px 25px rgba(244, 114, 182, 0.25)",
   },
 };
 
@@ -327,8 +317,51 @@ export default function Groups({ onNavigate }) {
           </button>
           <input className="form-control form-control-sm" style={{ width: 140, borderRadius: 50 }} placeholder="Search Ref" value={searchRef} onChange={(e) => setSearchRef(e.target.value)} />
           <button className="btn btn-warning btn-sm" style={styles.button} onClick={loadGroups}>🔄 Load / Edit</button>
-          <button className="btn fw-bold text-white shadow" style={{ background: "linear-gradient(135deg,#28a745,#20c997)", border: "none", borderRadius: "12px", padding: "8px 18px", transition: "0.3s" }} onClick={exportPDF}>📄 Export PDF</button>
-          <button className="btn fw-bold text-white shadow" style={{ background: "linear-gradient(135deg,#6c757d,#343a40)", border: "none", borderRadius: "12px", padding: "8px 18px", transition: "0.3s" }} onClick={printPDF}>🖨️ Print</button>
+{/* 📄 Export PDF (With Uplift Effect) */}
+          <button
+            className="btn fw-bold text-white shadow"
+            style={{
+              background: "linear-gradient(135deg,#28a745,#20c997)",
+              border: "none",
+              borderRadius: "12px",
+              padding: "8px 18px",
+              transition: "transform 0.2s ease, box-shadow 0.2s ease",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-2px) scale(1.03)";
+              e.currentTarget.style.boxShadow = "0 6px 15px rgba(40, 167, 69, 0.4)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0) scale(1)";
+              e.currentTarget.style.boxShadow = "0 4px 10px rgba(0,0,0,0.15)";
+            }}
+            onClick={exportPDF}
+          >
+            📄 Export PDF
+          </button>
+
+          {/* 🖨️ Print (With Uplift Effect) */}
+          <button
+            className="btn fw-bold text-white shadow"
+            style={{
+              background: "linear-gradient(135deg,#6c757d,#343a40)",
+              border: "none",
+              borderRadius: "12px",
+              padding: "8px 18px",
+              transition: "transform 0.2s ease, box-shadow 0.2s ease",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-2px) scale(1.03)";
+              e.currentTarget.style.boxShadow = "0 6px 15px rgba(108, 117, 125, 0.4)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0) scale(1)";
+              e.currentTarget.style.boxShadow = "0 4px 10px rgba(0,0,0,0.15)";
+            }}
+            onClick={printPDF}
+          >
+            🖨️ Print
+          </button>
         </div>
       </div>
 
