@@ -55,75 +55,88 @@ export default function Header({ title }) {
           />
         </div>
 
-        {/* Company */}
-        <div
-          style={{
-            flex: 1,
-            textAlign: "center",
-          }}
-        >
-          <div
-            style={{
-              fontSize: "30px",
-              fontWeight: "bold",
-              lineHeight: 1.2,
-            }}
-          >
-            <span style={{ color: "#0b3d91" }}>
-              AL MUKARRAM
-            </span>{" "}
-            <span style={{ color: "#d4af37" }}>
-              TRAVEL & TOURS
-            </span>
-          </div>
+{/* Company */}
+<div
+  style={{
+    flex: 1,
+    textAlign: "center",
+  }}
+>
+  <div
+    style={{
+      fontSize: "30px",
+      fontWeight: "bold",
+      lineHeight: 1.2,
+    }}
+  >
+    <span style={{ color: "#0b3d91" }}>
+      AL MUKARRAM
+    </span>{" "}
+    <span style={{ color: "#d4af37" }}>
+      TRAVEL & TOURS
+    </span>
+  </div>
 
-          <div
-            style={{
-              width: "120px",
-              height: "3px",
-              background: "#d4af37",
-              margin: "8px auto",
-            }}
-          />
+  <div
+    style={{
+      width: "120px",
+      height: "3px",
+      background: "#d4af37",
+      margin: "8px auto",
+    }}
+  />
 
-          <div
-            style={{
-              fontSize: "11px",
-              color: "#0b3d91",
-              fontWeight: "600",
-            }}
-          >
-            Shop No 30, Hoor Centre Jodia Bazar
-            <br />
-            Karachi
-          </div>
+  <div
+    style={{
+      fontSize: "11px",
+      color: "#0b3d91",
+      fontWeight: "600",
+    }}
+  >
+    Shop No 30, Hoor Centre Jodia Bazar
+    <br />
+    Karachi
+  </div>
 
-          <div
-            style={{
-              marginTop: "5px",
-              fontSize: "11px",
-              fontWeight: "600",
-            }}
-          >
-            <span style={{ color: "#003366" }}>
-              📧 almukarramtravel65@gmail.com
-            </span>
+  <div
+    style={{
+      marginTop: "5px",
+      fontSize: "11px",
+      fontWeight: "600",
+    }}
+  >
+    <span style={{ color: "#003366" }}>
+      📧 almukarramtravel65@gmail.com
+    </span>
 
-            <span
-              style={{
-                margin: "0 8px",
-                color: "#999",
-              }}
-            >
-              |
-            </span>
+    <span
+      style={{
+        margin: "0 8px",
+        color: "#999",
+      }}
+    >
+      |
+    </span>
 
-            <span style={{ color: "#198754" }}>
-              ☎ 0323-8230432 & 0322-2489045
-            </span>
-          </div>
-        </div>
-      </div>
+    <span style={{ color: "#198754" }}>
+      ☎ 0323-8230432
+    </span>
+
+    <span
+      style={{
+        margin: "0 8px",
+        color: "#999",
+      }}
+    >
+      |
+    </span>
+
+    <span style={{ color: "#198754" }}>
+      ☎ 0322-2489045
+    </span>
+  </div>
+</div>
+</div>
 
       {/* Divider */}
       <div
