@@ -119,7 +119,7 @@ export default function Header({ title }) {
             </span>
 
             <span style={{ color: "#198754" }}>
-              ☎ 0324-2163293
+              ☎ 0323-8230432 & 0322-2489045
             </span>
           </div>
         </div>
