@@ -17,6 +17,7 @@ export default function Packages({ onNavigate }) {
   // ⚡ CUSTOMER SELECTOR STATES
   const [customerName, setCustomerName] = useState("");
   const [customerCode, setCustomerCode] = useState("");
+  const [subCustomerName, setSubCustomerName] = useState("");
   const [savedCustomers, setSavedCustomers] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -254,6 +255,7 @@ const loadPackage = async () => {
     setRefNo(d.ref_no);
     setCustomerName(d.customer_name);
     setCustomerCode(d.customer_code || "");
+    setSubCustomerName(d.sub_customer_name || "");
 
     if (d.customer_code) {
       setSearchQuery(`${d.customer_name} (${d.customer_code})`);
@@ -386,6 +388,7 @@ const handleSavePackage = async () => {
     ref_no: refNo || null,
     customer_code: customerCode || null, // ⚡ Dynamic Customer Code mapping 
     customer_name: customerName,
+    sub_customer_name: subCustomerName || null,
     contact_no: contactNo,
     booking_date: bookingDate,
     adult_count: adultCount,
@@ -673,6 +676,20 @@ if (data.success) {
               )
             )}
           </div>
+
+  {/* FIELD 4: SUB / END CUSTOMER NAME (2 cols) */}
+  <div className="col-md-2">
+    <label className="fw-bold mb-1 text-dark">🏷️ Sub Customer</label>
+    <input
+      type="text"
+      className="form-control form-control-sm"
+      placeholder="Passenger / Client..."
+      value={subCustomerName}
+      onChange={(e) => setSubCustomerName(e.target.value)}
+    />
+    <small className="text-muted d-block mt-1">End client / Pax</small>
+  </div>
+
 
           <div className="col-md-2">
             <label className="fw-bold mb-1">Contact No</label>
