@@ -78,7 +78,6 @@ export default function PackagesView({ id, onNavigate, fromPage }) {
     packageDays = diff + 1;
     packageNights = diff;
   } else if (Array.isArray(data.hotels) && data.hotels.length > 0) {
-    // Agar valid flight dates na hon, toh hotels ke nights ka sum calculation ke liye use hoga
     const totalHotelNights = data.hotels.reduce(
       (sum, h) => sum + (Number(h.nights) || 0),
       0
@@ -116,7 +115,6 @@ export default function PackagesView({ id, onNavigate, fromPage }) {
   const infantFlightPKR =
     infantCount * Number(data.infant_rate || 0) * rate.flight;
 
-  // Total passengers for visa cost splitting
   const totalPassengers = adultCount + childCount + infantCount;
 
   const visaPKR = Number(data.visa_sar_total || 0) * rate.visa;
@@ -203,73 +201,70 @@ export default function PackagesView({ id, onNavigate, fromPage }) {
         {/* ===== HEADER ===== */}
         <Header title="PACKAGE QUOTATION" />
 
-{/* ===== PACKAGE INFO ===== */}
-<div className="mb-3">
-  {/* Ref No with Copy Functionality */}
-  <h4 className="fw-bold d-flex align-items-center gap-2">
-    <span>PACKAGE —</span>
-    <span
-      className="text-primary"
-      style={{ cursor: "pointer" }}
-      title="Click to copy Ref No"
-      onClick={() => handleCopyRef(data.ref_no)}
-    >
-      {data.ref_no || "-"}
-    </span>
-  </h4>
+        {/* ===== PACKAGE INFO ===== */}
+        <div className="mb-3">
+          <h4 className="fw-bold d-flex align-items-center gap-2">
+            <span>PACKAGE —</span>
+            <span
+              className="text-primary"
+              style={{ cursor: "pointer" }}
+              title="Click to copy Ref No"
+              onClick={() => handleCopyRef(data.ref_no)}
+            >
+              {data.ref_no || "-"}
+            </span>
+          </h4>
 
-  {/* Customer Name */}
-  <div className="mb-1" style={{ fontSize: "14px", fontWeight: "600" }}>
-    <span style={{ color: "#6c757d", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-      Customer:{" "}
-    </span>
-    <span className="fw-bold" style={{ color: "#0d6efd", fontSize: "17px" }}>
-      {data.customer_name || "-"}
-    </span>
-  </div>
+          <div className="mb-1" style={{ fontSize: "14px", fontWeight: "600" }}>
+            <span style={{ color: "#6c757d", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              Customer:{" "}
+            </span>
+            <span className="fw-bold" style={{ color: "#0d6efd", fontSize: "17px" }}>
+              {data.customer_name || "-"}
+            </span>
+          </div>
 
-  {/* Sub Customer Name */}
-  <div className="mb-2" style={{ fontSize: "14px", fontWeight: "600" }}>
-    <span style={{ color: "#6c757d", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-      Sub Customer:{" "}
-    </span>
-    <span className="fw-bold" style={{ color: "#0d9488", fontSize: "15px" }}>
-      {data.sub_customer_name || "-"}
-    </span>
-  </div>
+          <div className="mb-2" style={{ fontSize: "14px", fontWeight: "600" }}>
+            <span style={{ color: "#6c757d", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              Sub Customer:{" "}
+            </span>
+            <span className="fw-bold" style={{ color: "#0d9488", fontSize: "15px" }}>
+              {data.sub_customer_name || "-"}
+            </span>
+          </div>
 
-  <p className="mb-1"><b>Contact No:</b> {data.contact_no || "-"}</p>
-  <p className="mb-2"><b>Booking Date:</b> {fmtDate(data.booking_date)}</p>
+          <p className="mb-1"><b>Contact No:</b> {data.contact_no || "-"}</p>
+          <p className="mb-2"><b>Booking Date:</b> {fmtDate(data.booking_date)}</p>
 
-  <div
-    className="border rounded-3 p-3 mt-2 shadow-sm"
-    style={{
-      background: "linear-gradient(135deg,#f8f9fa,#e9f7ef)",
-      borderLeft: "5px solid #198754",
-    }}
-  >
-    <div
-      style={{
-        fontSize: "12px",
-        color: "#6c757d",
-        textTransform: "uppercase",
-        fontWeight: "600",
-      }}
-    >
-      Package Duration
-    </div>
+          <div
+            className="border rounded-3 p-3 mt-2 shadow-sm"
+            style={{
+              background: "linear-gradient(135deg,#f8f9fa,#e9f7ef)",
+              borderLeft: "5px solid #198754",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "12px",
+                color: "#6c757d",
+                textTransform: "uppercase",
+                fontWeight: "600",
+              }}
+            >
+              Package Duration
+            </div>
 
-    <div
-      style={{
-        fontSize: "22px",
-        fontWeight: "800",
-        color: "#198754",
-      }}
-    >
-      📅 {packageDays} Days / 🌙 {packageNights} Nights
-    </div>
-  </div>
-</div>
+            <div
+              style={{
+                fontSize: "22px",
+                fontWeight: "800",
+                color: "#198754",
+              }}
+            >
+              📅 {packageDays} Days / 🌙 {packageNights} Nights
+            </div>
+          </div>
+        </div>
 
         <hr />
 
@@ -343,18 +338,29 @@ export default function PackagesView({ id, onNavigate, fromPage }) {
 
         <hr />
 
-           {/* ===== TRANSPORT ===== */}
+        {/* ===== TRANSPORT ===== */}
         <h5 className="fw-bold text-danger mb-2">🚐 Transport</h5>
         {Array.isArray(data.transport) && data.transport.length > 0
-          ? data.transport.map((t, i) => (
-              <div key={i} className="border p-2 rounded mb-1 shadow-sm">
-                {t.date && <b className="text-primary">{fmtDate(t.date)} — </b>}
-                {t.text} {!hideAmounts && <>— {Number(t.amount || 0).toLocaleString()}</>}
-              </div>
-            ))
+          ? data.transport.map((t, i) => {
+              const persons = Number(t.persons) || 1;
+              const rateVal = Number(t.rate) || 0;
+              const totalSar = Number(t.amount || t.total) || (persons * rateVal);
+              return (
+                <div key={i} className="border p-2 rounded mb-2 shadow-sm">
+                  {t.date && <b className="text-primary">📅 {fmtDate(t.date)} — </b>}
+                  <span>{t.text || t.route || t.description}</span>
+                  {t.vehicle && <span className="text-muted ms-1">({t.vehicle})</span>}
+                  {!hideAmounts && (
+                    <div className="small text-muted mt-1">
+                      Persons: <b>{persons}</b> | Rate: <b>{rateVal}</b> | Total: <b>{Number(totalSar).toLocaleString()} SAR</b>
+                    </div>
+                  )}
+                </div>
+              );
+            })
           : <p>No transport</p>}
         {!hideAmounts && (
-          <p>
+          <p className="mt-2">
             <b>Transport SAR:</b> {Number(data.transport_sar_total || 0).toLocaleString()} <br />
             <b>SAR Rate:</b>  {rate.transport} <br />
             <b>Transport PKR:</b> {Number(data.transport_pkr_total || 0).toLocaleString()}
@@ -366,15 +372,26 @@ export default function PackagesView({ id, onNavigate, fromPage }) {
         {/* ===== ZIYARAT ===== */}
         <h5 className="fw-bold text-purple mb-2">🕌 Ziyarat</h5>
         {Array.isArray(data.ziyarat) && data.ziyarat.length > 0
-          ? data.ziyarat.map((z, i) => (
-              <div key={i} className="border p-2 rounded mb-1 shadow-sm">
-                {z.text || z.route || z.description}
-                {!hideAmounts && <> — {Number(z.amount || 0).toLocaleString()}</>}
-              </div>
-            ))
+          ? data.ziyarat.map((z, i) => {
+              const persons = Number(z.persons) || 1;
+              const rateVal = Number(z.rate) || 0;
+              const totalSar = Number(z.amount || z.total) || (persons * rateVal);
+              return (
+                <div key={i} className="border p-2 rounded mb-2 shadow-sm">
+                  {z.date && <b className="text-primary">📅 {fmtDate(z.date)} — </b>}
+                  <span>{z.text || z.route || z.description}</span>
+                  {z.vehicle && <span className="text-muted ms-1">({z.vehicle})</span>}
+                  {!hideAmounts && (
+                    <div className="small text-muted mt-1">
+                      Persons: <b>{persons}</b> | Rate: <b>{rateVal}</b> | Total: <b>{Number(totalSar).toLocaleString()} SAR</b>
+                    </div>
+                  )}
+                </div>
+              );
+            })
           : <p>No ziyarat</p>}
         {!hideAmounts && (
-          <p>
+          <p className="mt-2">
             <b>Ziyarat SAR:</b> {Number(data.ziyarat_sar_total || 0).toLocaleString()} <br />
             <b>SAR Rate:</b>  {rate.ziyarat} <br />
             <b>Ziyarat PKR:</b> {Number(data.ziyarat_pkr_total || 0).toLocaleString()}

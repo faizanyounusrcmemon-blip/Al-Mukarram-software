@@ -84,14 +84,60 @@ export default function Packages({ onNavigate }) {
 
   const visaTotal = visaRows.reduce((sum, v) => sum + (v.total || 0), 0);
 
+// Transport Rows
   const [transportRows, setTransportRows] = useState([]);
-  const addTransportRow = () => setTransportRows([...transportRows, { date: "", text: "", amount: 0 }]);
+  const addTransportRow = () => setTransportRows([...transportRows, { date: "", text: "", vehicle: "", persons: 0, rate: 0, amount: 0 }]);
   const removeTransportRow = (i) => setTransportRows(transportRows.filter((_, x) => x !== i));
+  const handleTransportChange = (i, field, value) => {
+    const rows = [...transportRows];
+    if (field === "text" || field === "date" || field === "vehicle") {
+      rows[i][field] = value;
+    } else {
+      rows[i][field] = Number(value) || 0;
+    }
+    const persons = Number(rows[i].persons) || 0;
+    const rate = Number(rows[i].rate) || 0;
+    let amount = Number(rows[i].amount) || 0;
+
+    if (field === "rate" || field === "persons") {
+      rows[i].amount = persons * rate;
+    } else if (field === "amount") {
+      if (persons > 0) {
+        rows[i].rate = Number((amount / persons).toFixed(2));
+      } else {
+        rows[i].rate = 0;
+      }
+    }
+    setTransportRows(rows);
+  };
   const transportTotal = transportRows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
 
+  // Ziyarat Rows
   const [ziyaratRows, setZiyaratRows] = useState([]);
-  const addZiyaratRow = () => setZiyaratRows([...ziyaratRows, { text: "", amount: 0 }]);
+  const addZiyaratRow = () => setZiyaratRows([...ziyaratRows, { date: "", text: "", vehicle: "", persons: 0, rate: 0, amount: 0 }]);
   const removeZiyaratRow = (i) => setZiyaratRows(ziyaratRows.filter((_, x) => x !== i));
+  const handleZiyaratChange = (i, field, value) => {
+    const rows = [...ziyaratRows];
+    if (field === "text" || field === "date" || field === "vehicle") {
+      rows[i][field] = value;
+    } else {
+      rows[i][field] = Number(value) || 0;
+    }
+    const persons = Number(rows[i].persons) || 0;
+    const rate = Number(rows[i].rate) || 0;
+    let amount = Number(rows[i].amount) || 0;
+
+    if (field === "rate" || field === "persons") {
+      rows[i].amount = persons * rate;
+    } else if (field === "amount") {
+      if (persons > 0) {
+        rows[i].rate = Number((amount / persons).toFixed(2));
+      } else {
+        rows[i].rate = 0;
+      }
+    }
+    setZiyaratRows(rows);
+  };
   const ziyaratTotal = ziyaratRows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
 
   const [flightRate, setFlightRate] = useState(0);
@@ -1010,9 +1056,6 @@ if (data.success) {
           </div>
         )}
 
-        {/* =============================
-            TRANSPORT SECTION
-        ============================= */}
 {/* TRANSPORT & ZIYARAT */}
 <h6 className="section-title">🚐 Transport</h6>
 <button className="btn btn-outline-primary btn-sm mb-2" onClick={addTransportRow}>
@@ -1021,9 +1064,12 @@ if (data.success) {
 <table className="table table-sm">
   <thead>
     <tr>
-      <th width="170">Travel Date</th>
+      <th width="150">Travel Date</th>
       <th>Description</th>
-      <th width="150">Amount (SAR)</th>
+      <th width="140">Vehicle / Details</th>
+      <th width="90">Persons</th>
+      <th width="110">Rate (SAR)</th>
+      <th width="110">Total (SAR)</th>
       <th width="40"></th>
     </tr>
   </thead>
@@ -1033,16 +1079,12 @@ if (data.success) {
         <td>
           <input
             type="date"
-            className="form-control form-control-sm"
+            className="form-control form-control-sm mb-1"
             value={t.date || ""}
-            onChange={(e) => {
-              const updated = [...transportRows];
-              updated[i].date = e.target.value;
-              setTransportRows(updated);
-            }}
+            onChange={(e) => handleTransportChange(i, "date", e.target.value)}
           />
           {t.date && (
-            <small className="text-muted d-block mt-1 fw-bold">
+            <small className="text-muted d-block fw-bold" style={{ fontSize: "0.8rem" }}>
               {showDate(t.date)}
             </small>
           )}
@@ -1053,23 +1095,40 @@ if (data.success) {
             className="form-control form-control-sm"
             placeholder="Transport details..."
             value={t.text}
-            onChange={(e) => {
-              const updated = [...transportRows];
-              updated[i].text = e.target.value;
-              setTransportRows(updated);
-            }}
+            onChange={(e) => handleTransportChange(i, "text", e.target.value)}
+          />
+        </td>
+        <td>
+          <input
+            type="text"
+            className="form-control form-control-sm"
+            placeholder="Vehicle..."
+            value={t.vehicle || ""}
+            onChange={(e) => handleTransportChange(i, "vehicle", e.target.value)}
           />
         </td>
         <td>
           <input
             type="number"
-            className="form-control form-control-sm"
+            className="form-control form-control-sm text-center"
+            value={t.persons}
+            onChange={(e) => handleTransportChange(i, "persons", e.target.value)}
+          />
+        </td>
+        <td>
+          <input
+            type="number"
+            className="form-control form-control-sm text-end"
+            value={t.rate}
+            onChange={(e) => handleTransportChange(i, "rate", e.target.value)}
+          />
+        </td>
+        <td>
+          <input
+            type="number"
+            className="form-control form-control-sm text-end"
             value={t.amount}
-            onChange={(e) => {
-              const updated = [...transportRows];
-              updated[i].amount = +e.target.value;
-              setTransportRows(updated);
-            }}
+            onChange={(e) => handleTransportChange(i, "amount", e.target.value)}
           />
         </td>
         <td>
@@ -1082,67 +1141,87 @@ if (data.success) {
   </tbody>
 </table>
 
-        {/* =============================
-            ZIYARAT SECTION
-        ============================= */}
-        <h6 className="section-title">🕌 Ziyarat</h6>
-
-        <button
-          className="btn btn-outline-primary btn-sm mb-2"
-          onClick={addZiyaratRow}
-        >
-          ➕ Add Ziyarat Row
-        </button>
-
-        <table className="table table-sm">
-          <tbody>
-            {ziyaratRows.map((z, i) => (
-              <tr key={i}>
-                <td>
-                  <input
-                    type="text"
-                    className="form-control form-control-sm"
-                    placeholder="Ziyarat Detail"
-                    value={z.text}
-                    onChange={(e) => {
-                      const updated = [...ziyaratRows];
-                      updated[i].text = e.target.value;
-                      setZiyaratRows(updated);
-                    }}
-                  />
-                </td>
-
-                <td width="150">
-                  <input
-                    type="number"
-                    className="form-control form-control-sm"
-                    value={z.amount}
-                    onChange={(e) => {
-                      const updated = [...ziyaratRows];
-                      updated[i].amount = +e.target.value;
-                      setZiyaratRows(updated);
-                    }}
-                  />
-                </td>
-
-                <td>
-                  <button
-                    className="btn btn-link text-danger"
-                    onClick={() => removeZiyaratRow(i)}
-                  >
-                    ✖
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {ziyaratRows.length > 0 && (
-          <div className="fw-bold text-end mb-3">
-            Ziyarat Total: {ziyaratTotal.toLocaleString()}
-          </div>
-        )}
+<h6 className="section-title">🕌 Ziyarat</h6>
+<button className="btn btn-outline-primary btn-sm mb-2" onClick={addZiyaratRow}>➕ Add Ziyarat Row</button>
+<table className="table table-sm">
+  <thead>
+    <tr>
+      <th width="150">Travel Date</th>
+      <th>Description</th>
+      <th width="140">Vehicle / Details</th>
+      <th width="90">Persons</th>
+      <th width="110">Rate (SAR)</th>
+      <th width="110">Total (SAR)</th>
+      <th width="40"></th>
+    </tr>
+  </thead>
+  <tbody>
+    {ziyaratRows.map((z, i) => (
+      <tr key={i}>
+        <td>
+          <input
+            type="date"
+            className="form-control form-control-sm mb-1"
+            value={z.date || ""}
+            onChange={(e) => handleZiyaratChange(i, "date", e.target.value)}
+          />
+          {z.date && (
+            <small className="text-muted d-block fw-bold" style={{ fontSize: "0.8rem" }}>
+              {showDate(z.date)}
+            </small>
+          )}
+        </td>
+        <td>
+          <input
+            type="text"
+            className="form-control form-control-sm"
+            placeholder="Ziyarat description..."
+            value={z.text}
+            onChange={(e) => handleZiyaratChange(i, "text", e.target.value)}
+          />
+        </td>
+        <td>
+          <input
+            type="text"
+            className="form-control form-control-sm"
+            placeholder="Vehicle..."
+            value={z.vehicle || ""}
+            onChange={(e) => handleZiyaratChange(i, "vehicle", e.target.value)}
+          />
+        </td>
+        <td>
+          <input
+            type="number"
+            className="form-control form-control-sm text-center"
+            value={z.persons}
+            onChange={(e) => handleZiyaratChange(i, "persons", e.target.value)}
+          />
+        </td>
+        <td>
+          <input
+            type="number"
+            className="form-control form-control-sm text-end"
+            value={z.rate}
+            onChange={(e) => handleZiyaratChange(i, "rate", e.target.value)}
+          />
+        </td>
+        <td>
+          <input
+            type="number"
+            className="form-control form-control-sm text-end"
+            value={z.amount}
+            onChange={(e) => handleZiyaratChange(i, "amount", e.target.value)}
+          />
+        </td>
+        <td>
+          <button className="btn btn-link text-danger p-0" onClick={() => removeZiyaratRow(i)}>
+            ✖
+          </button>
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
 
 
         {/* =============================
