@@ -272,7 +272,7 @@ const loadPackage = async () => {
 
   try {
 
-    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/bookings/get/${searchRef}`);
+    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/bookings/get/${searchRef.trim().toUpperCase()}`);
     const data = await res.json();
 
     if (!data.success) {
